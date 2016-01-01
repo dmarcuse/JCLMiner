@@ -1,4 +1,4 @@
-__kernel void testHash(__global const char* input, __global const int inputLength, __global char* output) {
+__kernel void testHash(__global const char* input, int inputLength, __global char* output) {
 	if (get_global_id(0) == 0) {
 		// do hashing stuff
 	}
