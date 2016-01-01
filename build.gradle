@@ -6,17 +6,15 @@ mainClassName = 'me.apemanzilla.jclminer.CommandLineLauncher'
 
 repositories {
 	mavenCentral()
-	maven {
-		url 'http://oss.sonatype.org/content/groups/public'
-	}
 }
 
 dependencies {
 	compile 'commons-cli:commons-cli:1.3.1'
 	compile 'commons-codec:commons-codec:1.10'
-	//compile 'org.jogamp.jocl:jocl:2.3.2'
-	compile 'com.nativelibs4java:javacl:1.0.0-RC4'
+	compile 'com.nativelibs4java:javacl-core:1.0.0-RC4'
 	compile project(':KristAPI')
+	
+	testCompile 'junit:junit:4.12'
 }
 
 run {
@@ -25,6 +23,7 @@ run {
 
 eclipse {
     classpath {
-       downloadSources=true
+       downloadSources = true
+       downloadJavadoc = true
     }
 }

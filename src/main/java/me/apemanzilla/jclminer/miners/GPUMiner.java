@@ -2,64 +2,68 @@ package me.apemanzilla.jclminer.miners;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.Observable;
 
-import org.bridj.Pointer;
-
+import com.nativelibs4java.opencl.CLBuffer;
 import com.nativelibs4java.opencl.CLContext;
 import com.nativelibs4java.opencl.CLDevice;
 import com.nativelibs4java.opencl.CLKernel;
+import com.nativelibs4java.opencl.CLMem.Usage;
 import com.nativelibs4java.opencl.CLProgram;
+import com.nativelibs4java.opencl.CLQueue;
 import com.nativelibs4java.opencl.JavaCL;
 
 import me.apemanzilla.jclminer.JCLMiner;
-import me.apemanzilla.jclminer.MinerUtils;
 
-final class GPUMiner extends Miner {
-	private static String loadCode() throws MinerInitException {
+final class GPUMiner extends Miner implements Runnable {
+
+	private static String loadCL() throws MinerInitException {
 		try {
 			InputStream is = JCLMiner.class.getResourceAsStream("/gpu_miner.cl");
-			if (is == null) throw new MinerInitException("Failed to read CL code - file missing");
-			int pos = 0;
+			if (is == null) throw new MinerInitException("Missing CL code");
+			if (is.available() == 0) throw new MinerInitException("Empty CL code file");
 			byte[] data = new byte[is.available()];
-			while (pos < data.length) {
-				int d = is.read();
-				if (d < 1)
-					break;
-				data[pos] = (byte) d;
-				pos++;
-			}
-			if (pos == 0) {
-				throw new MinerInitException("Failed to read CL code - file is empty");
-			}
+			is.read(data, 0, is.available());
 			return new String(data).trim();
 		} catch (IOException e) {
-			e.printStackTrace();
-			throw new MinerInitException("Failed to read CL code - unknown error");
+			throw new MinerInitException("Unknown IO error");
 		}
 	}
 	
-	private final CLDevice gpu;
-	private final CLContext context;
-	private final CLProgram program;
+	private final CLDevice dev;
+	private final String code;
 	
-	GPUMiner(CLDevice gpu) throws MinerInitException {
-		String src = loadCode();
-		this.gpu = gpu;
-		this.context = JavaCL.createContext(null, gpu);
-		this.program = context.createProgram(src);
+	private long hashcount = 0;
+	
+	private String block;
+	private String prefix;
+	private long work;
+	
+	private Thread worker;
+	
+	GPUMiner(CLDevice dev) throws MinerInitException {
+		this.dev = dev;
+		this.code = loadCL();
 	}
 	
 	@Override
-	public void start(long work, String block, String prefix, String suffix) {
-		
-
+	public void start(long work, String block, String prefix) {
+		if (worker == null) {
+			worker = new Thread(this);
+			this.block = block;
+			this.prefix = prefix;
+			this.work = work;
+			worker.start();
+		}
 	}
 
 	@Override
 	public void stop() {
-		// TODO Auto-generated method stub
-
+		worker.interrupt();
+		// wait for worker to stop
+		try {
+			worker.join();
+			worker = null;
+		} catch (InterruptedException e) {}
 	}
 
 	@Override
@@ -82,60 +86,36 @@ final class GPUMiner extends Miner {
 
 	@Override
 	public String getDeviceName() {
-		return gpu.getName();
+		return dev.getName().trim();
 	}
 
 	@Override
-	public int getTotalComputeUnits() {
-		return gpu.getMaxComputeUnits();
+	public void run() {
+		// initialization
+		CLContext context = JavaCL.createContext(null, dev);
+		CLQueue queue = context.createDefaultQueue();
+		CLProgram program = context.createProgram(code);
+		CLKernel kernel = program.createKernel("mine");
+		
+		boolean run = true;
+		int step = 1; // increment with each loop, multiply by cu to get base nonce
+		int cu = dev.getMaxComputeUnits();
+		
+		// allocate arguments
+		//  char[] prefix
+		//  int start
+		//  long work
+		//  int[] output
+		CLBuffer<Byte> prefix_buf = context.createByteBuffer(Usage.Input, block.length() + prefix.length());
+		CLBuffer<Integer> output_buf = context.createIntBuffer(Usage.Output, cu);
+		int start;
+		
+		// run
+		while (run && !worker.isInterrupted()) {
+			start = cu * step;
+			// TODO bind args and queue kernel
+			step++;
+		}
 	}
 
-	@Override
-	public void release() {
-		
-	}
-	
-	private final class Controller extends Observable implements Runnable {
-
-		private final CLProgram program;
-		private final long work;
-		private final byte[] lastBlock;
-		private final byte[] prefix;
-		private final byte[] suffix;
-		//private final CLKernel kernel;
-		
-		public String solution;
-		
-		public volatile boolean run;
-		
-		public Controller(CLProgram program, long work, String lastBlock, String prefix, String suffix) {
-			run = true;
-			this.program = program;
-			this.work = work;
-			this.lastBlock = MinerUtils.getBytes(lastBlock);
-			this.prefix = MinerUtils.getBytes(prefix);
-			this.suffix = MinerUtils.getBytes(suffix);
-			
-			// Create pointers
-			Pointer<Byte>
-				lastblockPtr = Pointer.allocateBytes(this.lastBlock.length).order(context.getByteOrder()),
-				prefixPtr = Pointer.allocateBytes(this.prefix.length).order(context.getByteOrder()),
-				suffixPtr = Pointer.allocateBytes(this.suffix.length).order(context.getByteOrder());
-			
-			// TODO
-			
-			// Create arguments and kernel
-			
-			
-		}
-		
-		@Override
-		public void run() {
-			while (run) {
-				
-			}
-			
-		}
-		
-	}
 }

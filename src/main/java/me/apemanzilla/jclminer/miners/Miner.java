@@ -16,7 +16,7 @@ public abstract class Miner extends Observable {
 	 * @param prefix The value to append to the beginning of the hash
 	 * @param suffix The value to append to the end of the hash
 	 */
-	public abstract void start(long work, String block, String prefix, String suffix);
+	public abstract void start(long work, String block, String prefix);
 	
 	/**
 	 * Starts the miner with no prefix or suffix.
@@ -24,20 +24,13 @@ public abstract class Miner extends Observable {
 	 * @param block The latest block mined
 	 */
 	public void start(long work, String block) {
-		start(work, block, "", "");
+		start(work, block, "");
 	}
 	
 	/**
 	 * Stops the miner.
 	 */
 	public abstract void stop();
-	
-	/**
-	 * When applicable, releases all resources held by the miner. Should ALWAYS be called when miners are removed for safety.
-	 */
-	public void release() {
-		
-	}
 	
 	/**
 	 * Retrieves the solution from the miner, or returns {@code null} if there is no solution yet.
@@ -62,10 +55,4 @@ public abstract class Miner extends Observable {
 	 * @return The name of the device
 	 */
 	public abstract String getDeviceName();
-	
-	/**
-	 * Returns the total number of compute units or cores available to the miner.
-	 * @return The number of compute units or cores
-	 */
-	public abstract int getTotalComputeUnits();
 }
