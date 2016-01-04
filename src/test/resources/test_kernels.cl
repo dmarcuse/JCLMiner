@@ -13,6 +13,14 @@ __kernel void testZFRS_INT(__global const int* input, __global const int* shift,
 	}
 }
 
+// tests zero fill right shift operation on chars
+__kernel void testZFRS_CHAR(__global const char* input, __global const int* shift, __global char* output, int worksize){
+	int id = get_global_id(0);
+	if (id < worksize) {
+		output[id] = ZFRS_CHAR(input[id], shift[id]);
+	}
+}
+
 // tests rotate right operation
 __kernel void testRR(__global const int* input, __global const int* dist, __global int* output, int worksize) {
 	int id = get_global_id(0);

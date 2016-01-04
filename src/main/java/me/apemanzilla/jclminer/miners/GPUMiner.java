@@ -15,19 +15,6 @@ import com.nativelibs4java.opencl.JavaCL;
 import me.apemanzilla.jclminer.JCLMiner;
 
 final class GPUMiner extends Miner implements Runnable {
-
-	private static String loadCL() throws MinerInitException {
-		try {
-			InputStream is = JCLMiner.class.getResourceAsStream("/gpu_miner.cl");
-			if (is == null) throw new MinerInitException("Missing CL code");
-			if (is.available() == 0) throw new MinerInitException("Empty CL code file");
-			byte[] data = new byte[is.available()];
-			is.read(data, 0, is.available());
-			return new String(data).trim();
-		} catch (IOException e) {
-			throw new MinerInitException("Unknown IO error");
-		}
-	}
 	
 	private final CLDevice dev;
 	private final String code;
@@ -42,7 +29,9 @@ final class GPUMiner extends Miner implements Runnable {
 	
 	GPUMiner(CLDevice dev) throws MinerInitException {
 		this.dev = dev;
-		this.code = loadCL();
+		this.code = CLCodeLoader.loadCode("gpu_miner.cl");
+		if (this.code == null)
+			throw new MinerInitException("Failed to load CL code!");
 	}
 	
 	@Override

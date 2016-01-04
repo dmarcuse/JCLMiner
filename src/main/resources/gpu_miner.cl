@@ -1,12 +1,12 @@
 // This file contains code for hashing and mining on OpenCL hardware
 
+// rotation operators
 #define RR(X, Y) rotate(X, -Y)
 #define RL(X, Y) rotate(X, Y)
 
 // zero fill right shift operators
-#define ZFRS_INT(X, Y) convert_int(convert_uint(X) >> Y)
-#define ZFRS_CHAR(X, Y) convert_char(convert_uchar(X) >> Y)
-
+#define ZFRS_INT(X, Y) ((uint) X >> Y)
+#define ZFRS_CHAR(X, Y) (X >> Y)
 
 __constant uint K[64] = {
 	0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
