@@ -49,13 +49,13 @@ __kernel void testK(__global int* output) {
 __kernel void testPadding(__global const char* input, int length, __global char* output) {
 	int id = get_global_id(0);
 	if (id == 0) {
-		char inp[55], out[64];
+		char data[64];
 		for (int i = 0; i < length; i++) {
-			inp[i] = input[i];
+			data[i] = input[i];
 		}
-		pad(inp, length, out);
-		for (int i = 0; i < sizeof(out); i++) {
-			output[i] = out[i];
+		pad(data, length);
+		for (int i = 0; i < 64; i++) {
+			output[i] = data[i];
 		}
 	}
 }
