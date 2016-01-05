@@ -37,6 +37,13 @@ __kernel void testRL(__global const int* input, __global const int* dist, __glob
 	}
 }
 
+__kernel void testK(__global int* output) {
+	int id = get_global_id(0);
+	if (id < sizeof(K)) {
+		output[id] = K[id];
+	}
+}
+
 // input should be PRE-PADDED! input length should ALWAYS BE 64!
 __kernel void testHash(__global const uchar* input, __global uchar* output) {
 	

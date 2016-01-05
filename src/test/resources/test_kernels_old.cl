@@ -4,6 +4,8 @@
 // This is only for testing compilation of the CL code - doesn't actually do anything
 __kernel void testCompile(){}
 
+// THIS IS NOT FULLY TESTED AND ALMOST DEFINITELY DOES NOT WORK PROPERLY!!
+// DO NOT EXPECT USEFUL RESULTS!
 __kernel void testHash(__global const uchar* input, int origLength, __global uchar* output) {
 	if(get_global_id(0) == 0) {
 		// pad input
