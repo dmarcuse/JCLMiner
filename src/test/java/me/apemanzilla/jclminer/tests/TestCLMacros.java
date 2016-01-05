@@ -26,26 +26,7 @@ import me.apemanzilla.jclminer.miners.CLCodeLoader;
  *
  */
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
-public class TestCLMacros {
-	
-	private CLContext context;
-	private CLQueue queue;
-	private CLProgram program;
-	
-	@Before
-	public void setUp() {
-		this.context = JavaCL.createBestContext();
-		this.queue = context.createDefaultQueue();
-		String mainCode = CLCodeLoader.loadCode("/gpu_miner.cl");
-		String testCode = CLCodeLoader.loadCode("/test_kernels.cl");
-		assertNotNull("Failed to load main code", mainCode);
-		assertNotNull("Failed to load test code", testCode);
-		program = context.createProgram(mainCode, testCode);
-		// Test that CL code can be compiled and the testCompile kernel can be run
-		CLKernel kernel = program.createKernel("testCompile");
-		CLEvent compilationTest = kernel.enqueueNDRange(queue, new int[] {1});
-		compilationTest.waitFor();
-	}
+public class TestCLMacros extends OpenCLTest {
 	
 	/**
 	 * Tests whether the ZFRS_INT macro (integer zero fill right shift) is producing expected results - compares output from OpenCL to Java's results
