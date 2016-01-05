@@ -18,13 +18,12 @@ __constant uint K[64] = {
 	0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3,
 	0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2};
 
-// restricted and optimized padding function
-// should be used to pad messages before creating digest
-// input array should be 64 items long as the output
-// is written to the same array for optimizations
-// make sure to pass the original data length as an int
-// input SHOULD NOT contain more than 55 items else padding will
-// fail!
+// optimized padding macro
+// takes a character array and integer
+// character array is used as both input and output
+// character array should be 64 items long regardless of content
+// actual input present in character array should not exceed 55 items
+// second argument should be the length of the input content
 // example usage:
 //	char data[64];
 //	data[0] = 'h';
@@ -32,13 +31,6 @@ __constant uint K[64] = {
 //	data[2] = 'l';
 //	data[3] = 'l';
 //	data[4] = 'o';
-//	pad(data, 5);
-//  // data array now contains 'hello' padded
-void pad(char* data, const int inputLength) {
-	int lengthBits = inputLength * 8;
-	data[63] = lengthBits & 0xFF;
-	data[62] = ZFRS_INT(lengthBits, 8) & 0xFF;
-	// the other 6 'end' items will always be zero, so we can skip the
-	// calculations to optimize padding.
-	data[inputLength] = 0x80;
-}
+//	PAD(data, 5);
+//	// data array now contains 'hello' padded
+#define PAD(X, Y) X[63] = Y * 8; X[62] =  Y >> 5; X[Y] = 0x80;

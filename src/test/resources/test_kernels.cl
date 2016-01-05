@@ -53,7 +53,7 @@ __kernel void testPadding(__global const char* input, int length, __global char*
 		for (int i = 0; i < length; i++) {
 			data[i] = input[i];
 		}
-		pad(data, length);
+		PAD(data, length);
 		for (int i = 0; i < 64; i++) {
 			output[i] = data[i];
 		}
