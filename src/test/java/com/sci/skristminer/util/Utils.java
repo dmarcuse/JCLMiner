@@ -131,7 +131,7 @@ public final class Utils
             if (responseCode != 200)
                 return null;
 
-            final List<String> result = new ArrayList<>();
+            final List<String> result = new ArrayList<String>();
             final BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream()));
             String line;
             while ((line = reader.readLine()) != null)
