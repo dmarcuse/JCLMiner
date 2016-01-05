@@ -37,10 +37,26 @@ __kernel void testRL(__global const int* input, __global const int* dist, __glob
 	}
 }
 
+// tests values of K constant
 __kernel void testK(__global int* output) {
 	int id = get_global_id(0);
 	if (id < sizeof(K)) {
 		output[id] = K[id];
+	}
+}
+
+// tests that the (rather limited) 'pad' function works properly
+__kernel void testPadding(__global const char* input, int length, __global char* output) {
+	int id = get_global_id(0);
+	if (id == 0) {
+		char inp[55], out[64];
+		for (int i = 0; i < length; i++) {
+			inp[i] = input[i];
+		}
+		pad(inp, length, out);
+		for (int i = 0; i < sizeof(out); i++) {
+			output[i] = out[i];
+		}
 	}
 }
 

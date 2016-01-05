@@ -18,4 +18,19 @@ __constant uint K[64] = {
 	0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3,
 	0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2};
 
-// TODO
+// restricted and optimized padding function
+// should be used to pad messages before creating digest
+// input should ALWAYS be 55 characters or shorter, else padding will fail
+// output is written to given array, always 64 characters long
+// as we cannot call sizeof on a pointer make sure to pass the input length
+void pad(const char* input, const int inputLength, char* output) {
+	int lengthBits = inputLength * 8;
+	output[63] = lengthBits & 0xFF;
+	output[62] = ZFRS_INT(lengthBits, 8) & 0xFF;
+	// the other 6 'end' items will always be zero, so we can skip the
+	// calculations to optimize padding.
+	output[inputLength] = 0x80;
+	for (int i = 0; i < inputLength; i++) {
+		output[i] = input[i];
+	}
+}

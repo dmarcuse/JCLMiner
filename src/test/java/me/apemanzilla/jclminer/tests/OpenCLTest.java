@@ -4,8 +4,6 @@ import static org.junit.Assert.*;
 
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Test;
-
 import com.nativelibs4java.opencl.CLContext;
 import com.nativelibs4java.opencl.CLEvent;
 import com.nativelibs4java.opencl.CLKernel;
@@ -29,7 +27,7 @@ public class OpenCLTest {
 		String testCode = CLCodeLoader.loadCode("/test_kernels.cl");
 		assertNotNull("Failed to load main code", mainCode);
 		assertNotNull("Failed to load test code", testCode);
-		program = context.createProgram(mainCode, testCode);
+		program = context.createProgram("#define UNIT_TESTING\n",mainCode, testCode);
 		// Test that CL code can be compiled and the testCompile kernel can be run
 		CLKernel kernel = program.createKernel("testCompile");
 		CLEvent compilationTest = kernel.enqueueNDRange(queue, new int[] {1});

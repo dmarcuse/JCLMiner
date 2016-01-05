@@ -3,21 +3,14 @@ package me.apemanzilla.jclminer.tests;
 import static org.junit.Assert.*;
 
 import org.bridj.Pointer;
-import org.junit.Before;
 import org.junit.FixMethodOrder;
 import org.junit.Test;
 import org.junit.runners.MethodSorters;
 
 import com.nativelibs4java.opencl.CLBuffer;
-import com.nativelibs4java.opencl.CLContext;
 import com.nativelibs4java.opencl.CLEvent;
 import com.nativelibs4java.opencl.CLKernel;
-import com.nativelibs4java.opencl.CLProgram;
-import com.nativelibs4java.opencl.CLQueue;
-import com.nativelibs4java.opencl.JavaCL;
 import com.nativelibs4java.opencl.CLMem.Usage;
-
-import me.apemanzilla.jclminer.miners.CLCodeLoader;
 
 /**
  * This class contains multiple JUnit tests that test the OpenCL portions of JCLMiner code.
