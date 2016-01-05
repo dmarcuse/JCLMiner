@@ -24,7 +24,7 @@ public class OpenCLTest {
 	public void setUp() {
 		context = JavaCL.createBestContext();
 		queue = context.createDefaultQueue();
-		String mainCode = CLCodeLoader.loadCode("/gpu_miner.cl");
+		String mainCode = CLCodeLoader.loadCode("/sha256.cl");
 		String testCode = CLCodeLoader.loadCode("/test_kernels.cl");
 		assertNotNull("Failed to load main code", mainCode);
 		assertNotNull("Failed to load test code", testCode);
