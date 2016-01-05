@@ -14,6 +14,8 @@ import me.apemanzilla.jclminer.miners.MinerInitException;
 
 public final class JCLMiner implements Runnable {
 
+	public static final String[] cl_build_options = {};
+	
 	private static void log(String message) {
 		System.out.println(message);
 	}
