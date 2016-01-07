@@ -2,13 +2,8 @@
 
 typedef uchar byte;
 
-// rotation operators
+// right rotate macro
 #define RR(X, Y) rotate((uint)X, -((uint)Y))
-#define RL(X, Y) rotate(X, Y)
-
-// zero fill right shift operators
-#define ZFRS_INT(X, Y) ((uint) X >> Y)
-#define ZFRS_CHAR(X, Y) (X >> Y)
 
 // optimized padding macro
 // takes a character array and integer
