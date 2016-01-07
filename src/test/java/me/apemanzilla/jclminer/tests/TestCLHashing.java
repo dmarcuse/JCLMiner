@@ -14,36 +14,47 @@ import com.sci.skristminer.util.Utils;
 
 public class TestCLHashing extends OpenCLTest {
 
+	private static String bytesToHex(byte[] in) {
+		String out = "";
+		for (int i = 0; i < in.length; i++) {
+			out += String.format("%x", in[i]);
+		}
+		return out;
+	}
+	
+	/**
+	 * Tests whether the SHA256 digest implementation is producing correct results - compares OpenCL results to Java results
+	 */
 	@Test
-	public void testHashing_messagePadding() {
+	public void testHashing_digest() {
 		// create an input that's 55 characters long (max supported input length)
 		String longInput = "";
 		for (int i = 0; i < 55; i++) {
 			longInput += (char) i;
 		}
 		String inputs[] = {"", "hello", "hello world", "ThIIs ^Is_ a T3ZT", longInput};
-		for (int j = 0; j < inputs.length; j++) {
-			String input = inputs[j];
-			byte[] inpbytes = Utils.getBytes(input);
+		CLKernel kernel = program.createKernel("testDigest");
+		for (int i = 0; i < inputs.length; i++) {
+			String input = inputs[i];
+			byte[] bytes = Utils.getBytes(input);
 			Pointer<Byte> inputPtr = Pointer.allocateBytes(input.length());
-			for (int i = 0; i < input.length(); i++) {
-				inputPtr.set(i, inpbytes[i]);
+			for (int j = 0; j < input.length(); j++) {
+				inputPtr.set(j,bytes[j]);
 			}
 			CLBuffer<Byte>
 					inputBuf = input.length() > 0 ? context.createByteBuffer(Usage.Input, inputPtr) : context.createByteBuffer(Usage.Input, 1),
-					outputBuf = context.createByteBuffer(Usage.Output, 64);
-			CLKernel kernel = program.createKernel("testPadding", inputBuf, input.length(), outputBuf);
-			CLEvent evt = kernel.enqueueNDRange(queue, new int[] {1});
+					outputBuf = context.createByteBuffer(Usage.Output, 32);
+			kernel.setArgs(inputBuf, input.length(), outputBuf);
+			CLEvent evt = kernel.enqueueNDRange(queue, new int[]{1});
 			Pointer<Byte> outputPtr = outputBuf.read(queue, evt);
-			byte[] output = new byte[64];
-			for (int i = 0; i < 64; i++) {
-				output[i] = outputPtr.get(i);
+			byte[] got = new byte[32];
+			for (int j = 0; j < 32; j++) {
+				got[j] = outputPtr.get(j);
 			}
-			byte[] expect = SHA256.padMessage(Utils.getBytes(input));
-			for (int i = 0; i < 64; i++) {
-				if (output[i] != expect[i]) {
-					fail(String.format("Mismatch on byte %d when padding item %d: read byte %d, wanted byte %d", i, j, output[i], expect[i]));
-				}
+			byte[] expect = SHA256.digest(bytes);
+			String gotHex = bytesToHex(got), expectHex = bytesToHex(expect);
+			if (!gotHex.equals(expectHex)) {
+				fail(String.format("Expected %s, got %s for item %d", expectHex, gotHex, i));
 			}
 		}
 	}
