@@ -45,7 +45,7 @@ __kernel void testK(__global int* output) {
 	}
 }
 
-// tests that the (rather limited) 'pad' function works properly
+// tests that the 'pad' macro works properly
 __kernel void testPadding(__global const char* input, int length, __global char* output) {
 	int id = get_global_id(0);
 	if (id == 0) {
@@ -60,7 +60,18 @@ __kernel void testPadding(__global const char* input, int length, __global char*
 	}
 }
 
-// input should be PRE-PADDED! input length should ALWAYS BE 64!
-__kernel void testHash(__global const uchar* input, __global uchar* output) {
-	
+// tests that the 'digest' function works properly
+__kernel void testDigest(__global const uchar* input, int length, __global uchar* output) {
+	int id = get_global_id(0);
+	if (id == 0) {
+		uchar data[64];
+		for (int i = 0; i < length; i++) {
+			data[i] = input[i];
+		}
+		uchar out[32];
+		digest(data, length, out);
+		for (int i = 0; i < 32; i++) {
+			output[i] = out[i];
+		}
+	}
 }
