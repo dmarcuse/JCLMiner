@@ -1,6 +1,7 @@
 apply plugin: 'java'
 apply plugin: 'application'
 apply plugin: 'eclipse'
+apply plugin: 'idea'
 
 mainClassName = 'me.apemanzilla.jclminer.CommandLineLauncher'
 
@@ -31,4 +32,15 @@ eclipse {
        downloadSources = true
        downloadJavadoc = true
     }
+}
+
+jar {
+	manifest {
+		attributes(
+				"Manifest-Version": "1.0",
+				"Main-Class": "me.apemanzilla.jclminer.CommandLineLauncher"
+		)
+	}
+
+	from configurations.compile.collect { it.isDirectory() ? it : zipTree(it) }
 }
