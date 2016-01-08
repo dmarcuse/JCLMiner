@@ -27,7 +27,7 @@ public final class CommandLineLauncher {
 			List<CLDevice> devices = JCLMiner.listCompatibleDevices();
 			System.out.println("Compatible OpenCL devices:");
 			for (CLDevice dev : devices) {
-				System.out.format("Name: %s ID: %s", dev.getName().trim(), dev.createSignature().hashCode());
+				System.out.format("Name: %s ID: %s\n", dev.getName().trim(), dev.createSignature().hashCode());
 			}
 			System.exit(1);
 		}

@@ -33,6 +33,12 @@ public abstract class Miner extends Observable {
 	public abstract void stop();
 	
 	/**
+	 * Checks whether the specified miner has a solution. This should not be used repeatedly, the miner should notify observers when it has a solution instead.
+	 * @return Whether the miner has a solution.
+	 */
+	public abstract boolean hasSolution();
+	
+	/**
 	 * Retrieves the solution from the miner, or returns {@code null} if there is no solution yet.
 	 * @return The solution nonce, or {@code null}
 	 */

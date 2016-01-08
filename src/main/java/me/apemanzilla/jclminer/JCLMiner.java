@@ -2,6 +2,7 @@ package me.apemanzilla.jclminer;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 
 import com.nativelibs4java.opencl.CLDevice;
 import com.nativelibs4java.opencl.CLPlatform;
@@ -18,6 +19,10 @@ public final class JCLMiner implements Runnable {
 	
 	public static boolean isDeviceCompatible(CLDevice dev) {
 		return dev.getType().contains(CLDevice.Type.GPU);
+	}
+	
+	public static String generateID() {
+		return String.format("%02x", new Random().nextInt(256));
 	}
 	
 	public static List<CLDevice> listCompatibleDevices() {
@@ -54,7 +59,7 @@ public final class JCLMiner implements Runnable {
 		CLDevice best = JavaCL.getBestDevice();
 		if (isDeviceCompatible(best)) {
 			try {
-				miners.add(MinerFactory.createMiner(best));
+				miners.add(MinerFactory.createMiner(best, this));
 			} catch (MinerInitException e) {
 				System.err.println(String.format("Failed to create miner for device %s", best.getName().trim()));
 				e.printStackTrace();
