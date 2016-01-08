@@ -7,7 +7,10 @@ import java.util.Random;
 import com.nativelibs4java.opencl.CLDevice;
 import com.nativelibs4java.opencl.CLPlatform;
 import com.nativelibs4java.opencl.JavaCL;
+import com.sci.skristminer.util.Utils;
 
+import me.apemanzilla.kristapi.KristAPI;
+import me.apemanzilla.kristapi.exceptions.SyncnodeDownException;
 import me.apemanzilla.kristapi.types.KristAddress;
 import me.apemanzilla.jclminer.miners.Miner;
 import me.apemanzilla.jclminer.miners.MinerFactory;
@@ -54,12 +57,13 @@ public final class JCLMiner implements Runnable {
 	/**
 	 * Initialize CL stuff
 	 */
-	private void init() {
+	private void initMiners() {
 		// get best device
 		CLDevice best = JavaCL.getBestDevice();
 		if (isDeviceCompatible(best)) {
 			try {
 				miners.add(MinerFactory.createMiner(best, this));
+				System.out.println("Device " + best.getName().trim() + " is ready for mining.");
 			} catch (MinerInitException e) {
 				System.err.println(String.format("Failed to create miner for device %s", best.getName().trim()));
 				e.printStackTrace();
@@ -70,7 +74,29 @@ public final class JCLMiner implements Runnable {
 	@Override
 	public void run() {
 		log("Starting JCLMiner...");
-		init();
+		initMiners();
+		for (Miner m : miners) {
+			try {
+				m.start(KristAPI.getWork(), KristAPI.getBlock());
+			} catch (SyncnodeDownException e) {
+				e.printStackTrace();
+			}
+		}
+		long hr;
+		while (true) {
+			try {
+				Thread.sleep(2000);
+			} catch (InterruptedException e) {}
+			hr = 0;
+			for (Miner m : miners) {
+				hr += m.getAverageHashRate();
+				System.out.format("Average rate %s\n", Utils.formatSpeed(hr));
+			}
+		}
+	}
+
+	public KristAddress getHost() {
+		return host;
 	}
 	
 }

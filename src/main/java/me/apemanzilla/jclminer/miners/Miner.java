@@ -8,24 +8,13 @@ import java.util.Observable;
  *
  */
 public abstract class Miner extends Observable {
-	
+
 	/**
 	 * Starts the miner.
 	 * @param work The work value - hash must be less than this for a nonce to be valid.
 	 * @param block The latest block mined
-	 * @param prefix The value to append to the beginning of the hash
-	 * @param suffix The value to append to the end of the hash
 	 */
-	public abstract void start(long work, String block, String prefix);
-	
-	/**
-	 * Starts the miner with no prefix or suffix.
-	 * @param work The work value - hash must be less than this for a nonce to be valid.
-	 * @param block The latest block mined
-	 */
-	public void start(long work, String block) {
-		start(work, block, "");
-	}
+	public abstract void start(long work, String block);
 	
 	/**
 	 * Stops the miner.

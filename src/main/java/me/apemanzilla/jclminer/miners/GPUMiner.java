@@ -1,14 +1,22 @@
 package me.apemanzilla.jclminer.miners;
 
+import org.bridj.Pointer;
+
+import com.nativelibs4java.opencl.CLBuffer;
 import com.nativelibs4java.opencl.CLContext;
 import com.nativelibs4java.opencl.CLDevice;
+import com.nativelibs4java.opencl.CLEvent;
 import com.nativelibs4java.opencl.CLKernel;
+import com.nativelibs4java.opencl.CLMem.Usage;
 import com.nativelibs4java.opencl.CLProgram;
 import com.nativelibs4java.opencl.CLQueue;
+import com.sci.skristminer.util.Utils;
 
 import me.apemanzilla.jclminer.JCLMiner;
 
 public class GPUMiner extends Miner implements Runnable {
+	
+	private final JCLMiner host;
 	
 	private final CLDevice dev;
 	private final CLContext ctx;
@@ -16,11 +24,20 @@ public class GPUMiner extends Miner implements Runnable {
 	private final CLProgram program;
 	private final CLKernel kernel;
 	
+	private String lastBlock;
+	private String address;
 	private String prefix = JCLMiner.generateID();
+	private long work;
 	
 	private Thread controller;
 
+	private Object hash_ct_lock = new Object();
+	
+	private long timeStarted = 0;
+	private long hashes = 0;
+	
 	GPUMiner(CLDevice dev, JCLMiner host) throws MinerInitException {
+		this.host = host;
 		this.dev = dev;
 		this.ctx = dev.getPlatform().createContext(null, new CLDevice[] {dev});
 		this.queue = ctx.createDefaultQueue();
@@ -36,18 +53,27 @@ public class GPUMiner extends Miner implements Runnable {
 			program.addBuildOption(opt);
 		}
 		kernel = program.createKernel("krist_miner_basic");
+		address = host.getHost().getAddress();
 	}
 	
 	@Override
-	public void start(long work, String block, String prefix) {
-		// TODO Auto-generated method stub
-
+	public void start(long work, String lastBlock) {
+		hashes = 0;
+		this.lastBlock = lastBlock;
+		this.work = work;
+		if (controller != null) {
+			controller.interrupt();
+		}
+		controller = new Thread(this);
+		timeStarted = System.currentTimeMillis();
+		controller.start();
 	}
 
 	@Override
 	public void stop() {
-		// TODO Auto-generated method stub
-
+		if (controller == null) {
+			controller.interrupt();
+		}
 	}
 
 	@Override
@@ -64,8 +90,7 @@ public class GPUMiner extends Miner implements Runnable {
 
 	@Override
 	public long getAverageHashRate() {
-		// TODO Auto-generated method stub
-		return 0;
+		return hashes / ((System.currentTimeMillis() - timeStarted) / 1000);
 	}
 
 	@Override
@@ -81,7 +106,28 @@ public class GPUMiner extends Miner implements Runnable {
 
 	@Override
 	public void run() {
-		// TODO Auto-generated method stub
+		// TODO make this a lot better
+		int range = 65536;
+		String start = lastBlock + address + prefix;
+		long base = 0;
+		byte[] bytes = Utils.getBytes(start);
+		Pointer<Byte> startPtr = Pointer.allocateBytes(24);
+		for (int i = 0; i < 24; i++) {
+			startPtr.set(i,bytes[i]);
+		}
+		CLBuffer<Byte> startBuf = ctx.createByteBuffer(Usage.Input, startPtr);
+		CLBuffer<Integer> outBuf = ctx.createIntBuffer(Usage.Output, 1);
+		while (!Thread.interrupted()) {
+			kernel.setArgs(startBuf, base, work, outBuf);
+			CLEvent evt = kernel.enqueueNDRange(queue, new int[] {range});
+			base += range;
+			hashes += range;
+			Pointer<Integer> outPtr = outBuf.read(queue, evt);
+			if (outPtr.get(0) == 1) {
+				System.out.println("SOLVED");
+				break;
+			}
+		}
 		
 	}
 	
