@@ -2,6 +2,9 @@
 
 typedef uchar byte;
 
+// macro so i can change it later
+#define mult_add(a,b,c) (a * b + c)
+
 // right rotate macro
 #define RR(X, Y) rotate((uint)X, -((uint)Y))
 
@@ -71,8 +74,8 @@ void digest(byte* data, uint inputLen, byte* hash) {
 	h7 = 0x5be0cd19;
 	/* transform */
 #pragma unroll
-	for (i = 0, j = 0; i < 16; ++i, j += 4)
-		m[i] = (data[j] << 24) | (data[j + 1] << 16) | (data[j + 2] << 8) | (data[j + 3]);
+	for (i = 0; i < 16; i++)
+		m[i] = (data[mult_add(i,4,0)] << 24) | (data[mult_add(i,4,1)] << 16) | (data[mult_add(i,4,2)] << 8) | (data[mult_add(i,4,3)]);
 #pragma unroll
 	for (i = 16; i < 64; ++i)
 		m[i] = SIG1(m[i - 2]) + m[i - 7] + SIG0(m[i - 15]) + m[i - 16];
@@ -108,7 +111,7 @@ void digest(byte* data, uint inputLen, byte* hash) {
 	/* finish */
 #pragma unroll
 	for (i = 0; i < 4; ++i) {
-		l = fma(i, -8, 24);
+		l = mult_add(i, -8, 24);
 		hash[i]      = (h0 >> l) & 0x000000ff;
 		hash[i + 4]  = (h1 >> l) & 0x000000ff;
 		hash[i + 8]  = (h2 >> l) & 0x000000ff;

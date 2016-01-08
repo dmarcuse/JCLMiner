@@ -16,6 +16,24 @@ public final class JCLMiner implements Runnable {
 
 	public static final String[] cl_build_options = {};
 	
+	public static boolean isDeviceCompatible(CLDevice dev) {
+		return dev.getType().contains(CLDevice.Type.GPU);
+	}
+	
+	public static List<CLDevice> listCompatibleDevices() {
+		List<CLDevice> out = new ArrayList<CLDevice>();
+		CLPlatform platforms[] = JavaCL.listPlatforms();
+		for (CLPlatform plat : platforms) {
+			CLDevice[] devices = plat.listAllDevices(false);
+			for (CLDevice dev : devices) {
+				if(isDeviceCompatible(dev)) {
+					out.add(dev);
+				}
+			}
+		}
+		return out;
+	}
+	
 	private static void log(String message) {
 		System.out.println(message);
 	}
@@ -32,19 +50,14 @@ public final class JCLMiner implements Runnable {
 	 * Initialize CL stuff
 	 */
 	private void init() {
-		CLPlatform[] platforms = JavaCL.listPlatforms();
-		for (CLPlatform plat : platforms) {
-			CLDevice[] devices = plat.listAllDevices(true);
-			for (CLDevice dev : devices) {
-				try {
-					Miner m = MinerFactory.createMiner(dev);
-					if (m != null) {
-						miners.add(m);
-						log("Initialized device '" + dev.getName().trim() + "'");
-					}
-				} catch (MinerInitException e) {
-					log("Failed to initialize device '" + dev.getName().trim() + "': " + e.getMessage());
-				}
+		// get best device
+		CLDevice best = JavaCL.getBestDevice();
+		if (isDeviceCompatible(best)) {
+			try {
+				miners.add(MinerFactory.createMiner(best));
+			} catch (MinerInitException e) {
+				System.err.println(String.format("Failed to create miner for device %s", best.getName().trim()));
+				e.printStackTrace();
 			}
 		}
 	}
