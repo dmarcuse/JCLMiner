@@ -46,6 +46,10 @@ public final class CommandLineLauncher {
 			System.exit(1);
 		}
 		// Run miner
+		if (cmd.getOptionValue('h').length() != 10) {
+			System.err.println("Invalid Krist address!");
+			System.exit(1);
+		}
 		JCLMiner m = new JCLMiner(KristAddress.auto(cmd.getOptionValue('h')));
 		if (cmd.hasOption('a')) {
 			m.useDevices(JCLMiner.listCompatibleDevices());

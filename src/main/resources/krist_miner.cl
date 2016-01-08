@@ -3,13 +3,13 @@ long hashToLong(byte* hash) {
 }
 
 // for easy changing later
-#define START_LENGTH 24
+#define SL 24
 
 __kernel void krist_miner_basic(
 		__global const byte* start,		// 24 characters - last block (12), address (10), prefix (2)
 		const long base,
 		const long work,
-		__global int* output) {
+		__global long* output) {
 	byte input[64];
 	byte hashed[32];
 	int id = get_global_id(0);
@@ -17,17 +17,18 @@ __kernel void krist_miner_basic(
 	long nonce = id + base;
 	// copy start array
 #pragma unroll
-	for (i = 0; i < START_LENGTH; i++) {
+	for (i = 0; i < SL; i++) {
 		input[i] = start[i];
 	}
 	// convert nonce to 10 bytes
 #pragma unroll
-	for (i = START_LENGTH; i < 34; i++) {
-		input[i] = (nonce >> ((i - START_LENGTH) * 5) & 31) + 48;
+	for (i = SL; i < 34; i++) {
+		input[i] = (nonce >> ((i - SL) * 5) & 31) + 48;
 	}
 	digest(input, 34, hashed);
 	long score = hashToLong(hashed);
 	if (score <= work) {
-		output[0] = id;
+#pragma unroll
+		output[0] = nonce;
 	}
 }

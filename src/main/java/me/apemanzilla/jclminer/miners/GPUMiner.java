@@ -1,5 +1,7 @@
 package me.apemanzilla.jclminer.miners;
 
+import java.io.UnsupportedEncodingException;
+
 import org.bridj.Pointer;
 
 import com.nativelibs4java.opencl.CLBuffer;
@@ -16,8 +18,6 @@ import me.apemanzilla.jclminer.JCLMiner;
 
 public class GPUMiner extends Miner implements Runnable {
 	
-	private final JCLMiner host;
-	
 	private final CLDevice dev;
 	private final CLContext ctx;
 	private final CLQueue queue;
@@ -30,14 +30,15 @@ public class GPUMiner extends Miner implements Runnable {
 	private long work;
 	
 	private Thread controller;
-
-	private Object hash_ct_lock = new Object();
 	
 	private long timeStarted = 0;
 	private long hashes = 0;
 	
-	GPUMiner(CLDevice dev, JCLMiner host) throws MinerInitException {
-		this.host = host;
+	private String solution;
+	
+	private final Object hash_count_lock = new Object();
+	
+	GPUMiner(CLDevice dev, String address) throws MinerInitException {
 		this.dev = dev;
 		this.ctx = dev.getPlatform().createContext(null, new CLDevice[] {dev});
 		this.queue = ctx.createDefaultQueue();
@@ -53,7 +54,7 @@ public class GPUMiner extends Miner implements Runnable {
 			program.addBuildOption(opt);
 		}
 		kernel = program.createKernel("krist_miner_basic");
-		address = host.getHost().getAddress();
+		this.address = address;
 	}
 	
 	@Override
@@ -78,24 +79,27 @@ public class GPUMiner extends Miner implements Runnable {
 
 	@Override
 	public boolean hasSolution() {
-		// TODO Auto-generated method stub
-		return false;
+		return solution != null;
 	}
 
 	@Override
 	public String getSolution() {
-		// TODO Auto-generated method stub
-		return null;
+		return solution != null ? solution : null;
 	}
 
 	@Override
 	public long getAverageHashRate() {
-		return hashes / ((System.currentTimeMillis() - timeStarted) / 1000);
+		synchronized (hash_count_lock) {
+			if (hashes > 0) {
+				return hashes / ((System.currentTimeMillis() - timeStarted) / 1000);
+			} else {
+				return 0;
+			}
+		}
 	}
 
 	@Override
 	public long getRecentHashRate() {
-		// TODO Auto-generated method stub
 		return 0;
 	}
 
@@ -107,8 +111,8 @@ public class GPUMiner extends Miner implements Runnable {
 	@Override
 	public void run() {
 		// TODO make this a lot better
-		int range = 65536;
-		String start = lastBlock + address + prefix;
+		int range = 90000;
+		String start = address + lastBlock + prefix;
 		long base = 0;
 		byte[] bytes = Utils.getBytes(start);
 		Pointer<Byte> startPtr = Pointer.allocateBytes(24);
@@ -116,19 +120,29 @@ public class GPUMiner extends Miner implements Runnable {
 			startPtr.set(i,bytes[i]);
 		}
 		CLBuffer<Byte> startBuf = ctx.createByteBuffer(Usage.Input, startPtr);
-		CLBuffer<Integer> outBuf = ctx.createIntBuffer(Usage.Output, 1);
+		CLBuffer<Long> outBuf = ctx.createLongBuffer(Usage.Output, 12);
 		while (!Thread.interrupted()) {
 			kernel.setArgs(startBuf, base, work, outBuf);
 			CLEvent evt = kernel.enqueueNDRange(queue, new int[] {range});
-			base += range;
-			hashes += range;
-			Pointer<Integer> outPtr = outBuf.read(queue, evt);
-			if (outPtr.get(0) == 1) {
-				System.out.println("SOLVED");
+			Pointer<Long> outPtr = outBuf.read(queue, evt);
+			if (outPtr.get(0) != 0) {
+				// assemble solution
+				long nonce = outPtr.get(0);
+				System.out.println(nonce);
+				char hex_nonce[] = new char[10];
+				for (int i = 0; i < 10; i++) {
+					hex_nonce[i] = (char) ((nonce >> ((i) * 5) & 31) + 48);
+				}
+				solution = prefix + new String(hex_nonce);
+				setChanged();
+				notifyObservers();
 				break;
+			}
+			base += range;
+			synchronized (hash_count_lock) {
+				hashes += range;
 			}
 		}
 		
 	}
-	
 }
