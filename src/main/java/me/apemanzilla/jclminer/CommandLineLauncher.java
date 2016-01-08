@@ -19,6 +19,8 @@ public final class CommandLineLauncher {
 		Options options = new Options();
 		options.addOption("h",	"host",			true,	"The address to send rewards to.");
 		options.addOption("l",	"list-devices",	false,	"Show a list of compatible devices and their IDs");
+		options.addOption("b",	"best-device",	false,	"Mine on whichever device is deemed 'best.' Default option.");
+		options.addOption("a",	"all-devices",	false,	"Mine on all compatible hardware devices.");
 		options.addOption("d",	"devices",		true,	"Specifies which devices, and optionally, what range, to mine on. By default, will attempt to choose optimal settings.");
 		options.addOption("?",	"help",			false,	"Show usage.");
 		CommandLine cmd = new DefaultParser().parse(options, args);
@@ -45,6 +47,9 @@ public final class CommandLineLauncher {
 		}
 		// Run miner
 		JCLMiner m = new JCLMiner(KristAddress.auto(cmd.getOptionValue('h')));
+		if (cmd.hasOption('a')) {
+			m.useDevices(JCLMiner.listCompatibleDevices());
+		}
 		m.run();
 	}
 

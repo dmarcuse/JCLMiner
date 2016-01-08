@@ -46,6 +46,8 @@ public final class JCLMiner implements Runnable {
 		System.out.println(message);
 	}
 	
+	private List<CLDevice> devices;
+	
 	private final KristAddress host;
 	private final List<Miner> miners;
 	
@@ -58,17 +60,39 @@ public final class JCLMiner implements Runnable {
 	 * Initialize CL stuff
 	 */
 	private void initMiners() {
-		// get best device
-		CLDevice best = JavaCL.getBestDevice();
-		if (isDeviceCompatible(best)) {
-			try {
-				miners.add(MinerFactory.createMiner(best, this));
-				System.out.println("Device " + best.getName().trim() + " is ready for mining.");
-			} catch (MinerInitException e) {
-				System.err.println(String.format("Failed to create miner for device %s", best.getName().trim()));
-				e.printStackTrace();
+		if (devices == null) {
+			// get best device
+			CLDevice best = JavaCL.getBestDevice();
+			if (isDeviceCompatible(best)) {
+				try {
+					miners.add(MinerFactory.createMiner(best, this));
+					System.out.format("Device %s is ready for mining\n", best.getName().trim());
+				} catch (MinerInitException e) {
+					System.err.println(String.format("Failed to create miner for device %s\n", best.getName().trim()));
+					e.printStackTrace();
+				}
+			}
+		} else {
+			// use specified devices
+			for (CLDevice dev : devices) {
+				if (isDeviceCompatible(dev)) {
+					try {
+						Miner m = MinerFactory.createMiner(dev, this);
+						miners.add(m);
+						System.out.format("Device %s is ready for mining\n", dev.getName().trim());
+					} catch (MinerInitException e) {
+						System.err.format("Failed to create miner for device %s\n", dev.getName().trim());
+						e.printStackTrace();
+					}
+				} else {
+					System.out.format("Specified device %s is incompatible\n", dev.getName().trim());
+				}
 			}
 		}
+	}
+	
+	public void useDevices(List<CLDevice> devices) {
+		this.devices = devices;
 	}
 	
 	@Override
