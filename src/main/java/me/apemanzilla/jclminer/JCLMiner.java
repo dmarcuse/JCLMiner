@@ -114,8 +114,8 @@ public final class JCLMiner implements Runnable {
 			hr = 0;
 			for (Miner m : miners) {
 				hr += m.getAverageHashRate();
-				System.out.format("Average rate %s\n", Utils.formatSpeed(hr));
 			}
+			System.out.format("Average rate %s\n", Utils.formatSpeed(hr));
 		}
 	}
 
