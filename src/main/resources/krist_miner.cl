@@ -7,8 +7,8 @@ long hashToLong(byte* hash) {
 
 __kernel void krist_miner_basic(
 		__global const byte* start,		// 24 characters - last block (12), address (10), prefix (2)
-		__global long base,
-		__global long work,
+		const long base,
+		const long work,
 		__global int* output) {
 	byte input[64];
 	byte hashed[32];
@@ -23,7 +23,7 @@ __kernel void krist_miner_basic(
 	// convert nonce to 10 bytes
 #pragma unroll
 	for (i = START_LENGTH; i < 34; i++) {
-		input[i] = (nonce >> ((i - START_LENGTH) * 5) & 31) + 48);
+		input[i] = (nonce >> ((i - START_LENGTH) * 5) & 31) + 48;
 	}
 	digest(input, 34, hashed);
 	long score = hashToLong(hashed);
