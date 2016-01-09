@@ -2,6 +2,8 @@ package me.apemanzilla.jclminer.tests;
 
 import static org.junit.Assert.*;
 
+import java.io.UnsupportedEncodingException;
+
 import org.bridj.Pointer;
 import org.junit.Test;
 

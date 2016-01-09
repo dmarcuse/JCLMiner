@@ -1,7 +1,5 @@
 package me.apemanzilla.jclminer.miners;
 
-import java.io.UnsupportedEncodingException;
-
 import org.bridj.Pointer;
 
 import com.nativelibs4java.opencl.CLBuffer;
@@ -12,9 +10,10 @@ import com.nativelibs4java.opencl.CLKernel;
 import com.nativelibs4java.opencl.CLMem.Usage;
 import com.nativelibs4java.opencl.CLProgram;
 import com.nativelibs4java.opencl.CLQueue;
+import com.sci.skristminer.util.SHA256;
 import com.sci.skristminer.util.Utils;
-
 import me.apemanzilla.jclminer.JCLMiner;
+import me.apemanzilla.jclminer.MinerUtils;
 
 public class GPUMiner extends Miner implements Runnable {
 	
@@ -72,7 +71,7 @@ public class GPUMiner extends Miner implements Runnable {
 
 	@Override
 	public void stop() {
-		if (controller == null) {
+		if (controller == null && controller.isAlive()) {
 			controller.interrupt();
 		}
 	}
@@ -112,37 +111,49 @@ public class GPUMiner extends Miner implements Runnable {
 	public void run() {
 		// TODO make this a lot better
 		int range = 90000;
-		String start = address + lastBlock + prefix;
 		long base = 0;
-		byte[] bytes = Utils.getBytes(start);
-		Pointer<Byte> startPtr = Pointer.allocateBytes(24);
-		for (int i = 0; i < 24; i++) {
-			startPtr.set(i,bytes[i]);
+		Pointer<Byte> addressPtr = Pointer.allocateBytes(10).order(ctx.getByteOrder());
+		byte[] addressBytes = Utils.getBytes(address);
+		for (int i = 0; i < 10; i ++) {
+			addressPtr.set(i, addressBytes[i]);
 		}
-		CLBuffer<Byte> startBuf = ctx.createByteBuffer(Usage.Input, startPtr);
-		CLBuffer<Long> outBuf = ctx.createLongBuffer(Usage.Output, 12);
+		Pointer<Byte> blockPtr = Pointer.allocateBytes(12).order(ctx.getByteOrder());
+		byte[] blockBytes = Utils.getBytes(lastBlock);
+		for (int i = 0; i < 12; i++) {
+			blockPtr.set(i, blockBytes[i]);
+		}
+		Pointer<Byte> prefixPtr = Pointer.allocateBytes(2).order(ctx.getByteOrder());
+		byte[] prefixBytes = Utils.getBytes(prefix);
+		for (int i = 0; i < 2; i++) {
+			prefixPtr.set(i, prefixBytes[i]);
+		}
+		CLBuffer<Byte>
+				addressBuf = ctx.createByteBuffer(Usage.Input, addressPtr),
+				blockBuf = ctx.createByteBuffer(Usage.Input, blockPtr),
+				prefixBuf = ctx.createByteBuffer(Usage.Input, prefixPtr);
+		CLBuffer<Byte> outputBuf = ctx.createByteBuffer(Usage.Output, 34);
 		while (!Thread.interrupted()) {
-			kernel.setArgs(startBuf, base, work, outBuf);
+			kernel.setArgs(addressBuf, blockBuf, prefixBuf, base, work, outputBuf);
 			CLEvent evt = kernel.enqueueNDRange(queue, new int[] {range});
-			Pointer<Long> outPtr = outBuf.read(queue, evt);
-			if (outPtr.get(0) != 0) {
-				// assemble solution
-				long nonce = outPtr.get(0);
-				System.out.println(nonce);
-				char hex_nonce[] = new char[10];
-				for (int i = 0; i < 10; i++) {
-					hex_nonce[i] = (char) ((nonce >> ((i) * 5) & 31) + 48);
+			Pointer<Byte> outputPtr = outputBuf.read(queue, evt);
+			if (outputPtr.get(0) != 0) {
+				// try solution
+				byte[] output = new byte[34];
+				for (int i = 0; i < 34; i++) {
+					output[i] = outputPtr.get(i);
 				}
-				solution = prefix + new String(hex_nonce);
-				setChanged();
-				notifyObservers();
-				break;
+				long score = Utils.hashToLong(SHA256.digest(output));
+				if (score <= work) {
+					byte[] c = new byte[12];
+					System.arraycopy(output, 22, c, 0, 12);
+					solution = new String(MinerUtils.getChars(c));
+					setChanged();
+					notifyObservers();
+					break;
+				}
 			}
 			base += range;
-			synchronized (hash_count_lock) {
-				hashes += range;
-			}
+			synchronized (hash_count_lock) { hashes += range; }
 		}
-		
 	}
 }

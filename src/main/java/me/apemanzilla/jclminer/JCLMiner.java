@@ -9,10 +9,7 @@ import java.util.Random;
 import com.nativelibs4java.opencl.CLDevice;
 import com.nativelibs4java.opencl.CLPlatform;
 import com.nativelibs4java.opencl.JavaCL;
-import com.sci.skristminer.util.SHA256;
 import com.sci.skristminer.util.Utils;
-
-import me.apemanzilla.kristapi.KristAPI;
 import me.apemanzilla.kristapi.exceptions.SyncnodeDownException;
 import me.apemanzilla.kristapi.types.KristAddress;
 import me.apemanzilla.jclminer.miners.Miner;
@@ -103,8 +100,11 @@ public final class JCLMiner implements Runnable, Observer {
 	
 	private boolean stop;
 	
+	// blocks solved
+	private long blocks = 0;
+	
 	private void startMiners() {
-		System.out.format("Block: %s Work: %d\n", state.getBlock(), state.getWork());
+		System.out.format("Mining for block: %s Work: %d\n", state.getBlock().trim(), state.getWork());
 		for (Miner m : miners) {
 			m.start(state.getWork(), state.getBlock());
 		}
@@ -145,8 +145,8 @@ public final class JCLMiner implements Runnable, Observer {
 		}
 		while(state.getBlock() == null || state.getWork() == 0) {}
 		// main loop
+		System.out.println("Starting miners...");
 		while (true) {
-			System.out.println("Starting miners...");
 			startMiners();
 			while (!stop) {
 				try {
@@ -154,15 +154,21 @@ public final class JCLMiner implements Runnable, Observer {
 				} catch (InterruptedException e) {}
 				if (!stop) System.out.format("Average hash rate: %s\n", Utils.formatSpeed(getAverageHashRate()));
 			}
-			System.out.println("Stopping miners...");
 			stopMiners();
 			String sol = findSolution();
 			if (sol != null) {
-				System.out.println("Block solved!");
-				System.out.format("Solution: %s Length: %d\n", sol, sol.length());
-				byte hashed[] = SHA256.digest(Utils.getBytes(host.getAddress() + state.getBlock() + sol));
-				long score = Utils.hashToLong(hashed);
-				System.out.format("Score: %d\n", score);
+				try {
+					String currBlock = state.getBlock();
+					if (host.submitBlock(sol)) {
+						blocks++;
+						System.out.format("Block solved!\n%d total.\n", blocks);
+						// wait for block to change
+						while (state.getBlock() == currBlock) {}
+					}
+				} catch (SyncnodeDownException e) {
+					System.err.format("Failed to submit solution %s - syncnode down\n",sol);
+					e.printStackTrace();
+				}
 			}
 			stop = false;
 		}

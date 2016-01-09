@@ -26,8 +26,8 @@ typedef uchar byte;
 #define PAD(X, Y) X[63] = Y * 8; X[62] =  Y >> 5; X[Y] = 0x80;
 
 // SHA256 macros
-#define CH(x,y,z) (((x) & (y)) ^ (~(x) & (z)))
-#define MAJ(x,y,z) (((x) & (y)) ^ ((x) & (z)) ^ ((y) & (z)))
+#define CH(x,y,z) bitselect(z,y,x)
+#define MAJ(x,y,z) bitselect(x,y,z^x)
 #define EP0(x) (RR(x,2) ^ RR(x,13) ^ RR(x,22))
 #define EP1(x) (RR(x,6) ^ RR(x,11) ^ RR(x,25))
 #define SIG0(x) (RR(x,7) ^ RR(x,18) ^ ((x) >> 3))

@@ -5,6 +5,17 @@ public final class MinerUtils {
 	private MinerUtils(){}
 	
 	/**
+	 * @author apemanzilla
+	 */
+    public static char[] getChars(final byte[] b) {
+    	final char[] chars = new char[b.length];
+    	for (int i = 0; i < chars.length; i++) {
+    		chars[i] = (char) b[i];
+    	}
+    	return chars;
+    }
+	
+	/**
 	 * @author sci4me
 	 */
     public static byte[] getBytes(final String s)
