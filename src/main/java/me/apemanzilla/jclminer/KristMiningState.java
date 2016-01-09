@@ -3,6 +3,7 @@ package me.apemanzilla.jclminer;
 import java.util.Observable;
 
 import me.apemanzilla.kristapi.KristAPI;
+import me.apemanzilla.kristapi.exceptions.RemoteErrorException;
 import me.apemanzilla.kristapi.exceptions.SyncnodeDownException;
 
 /**
@@ -87,6 +88,8 @@ public class KristMiningState extends Observable implements Runnable {
 				break;
 			} catch (SyncnodeDownException e) {
 				// TODO 
+			} catch (RemoteErrorException e) {
+				// TODO
 			}
 		}
 	}
