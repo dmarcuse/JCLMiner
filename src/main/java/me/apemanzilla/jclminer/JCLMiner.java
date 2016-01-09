@@ -3,6 +3,7 @@ package me.apemanzilla.jclminer;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Observable;
@@ -51,7 +52,7 @@ public final class JCLMiner implements Runnable, Observer {
 	
 	private List<CLDevice> devices;
 	
-	private Map<Integer, Integer> deviceWorkSizes;
+	private Map<Integer, Integer> deviceWorkSizes = new HashMap<Integer, Integer>();
 	
 	private final KristAddress host;
 	private final List<Miner> miners;
