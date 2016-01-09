@@ -51,3 +51,15 @@ __kernel void testDigest(__global const uchar* input, int length, __global uchar
 		}
 	}
 }
+
+
+__kernel void testHashToLong(__global const byte* hash, __global long* output) {
+	int id = get_global_id(0);
+	byte input[32];
+	for (int i = 0; i < 32; i++) {
+		input[i] = hash[i];
+	}
+	if (id == 0) {
+		output[0] = hashToLong(input);
+	}
+}

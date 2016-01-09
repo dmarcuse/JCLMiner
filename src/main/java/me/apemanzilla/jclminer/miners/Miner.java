@@ -8,29 +8,24 @@ import java.util.Observable;
  *
  */
 public abstract class Miner extends Observable {
-	
+
 	/**
 	 * Starts the miner.
 	 * @param work The work value - hash must be less than this for a nonce to be valid.
 	 * @param block The latest block mined
-	 * @param prefix The value to append to the beginning of the hash
-	 * @param suffix The value to append to the end of the hash
 	 */
-	public abstract void start(long work, String block, String prefix);
-	
-	/**
-	 * Starts the miner with no prefix or suffix.
-	 * @param work The work value - hash must be less than this for a nonce to be valid.
-	 * @param block The latest block mined
-	 */
-	public void start(long work, String block) {
-		start(work, block, "");
-	}
+	public abstract void start(long work, String block);
 	
 	/**
 	 * Stops the miner.
 	 */
 	public abstract void stop();
+	
+	/**
+	 * Checks whether the specified miner has a solution. This should not be used repeatedly, the miner should notify observers when it has a solution instead.
+	 * @return Whether the miner has a solution.
+	 */
+	public abstract boolean hasSolution();
 	
 	/**
 	 * Retrieves the solution from the miner, or returns {@code null} if there is no solution yet.
@@ -55,4 +50,18 @@ public abstract class Miner extends Observable {
 	 * @return The name of the device
 	 */
 	public abstract String getDeviceName();
+	
+	/**
+	 * Checks whether the given Miner is using OpenCL.
+	 * @return
+	 */
+	public boolean isOpenCLMiner() {
+		return false;
+	}
+	
+	/**
+	 * Sets the work size for the given Miner. Only to be used on OpenCL miners.
+	 * @param range The work size
+	 */
+	public void setWorkSize(int size) {}
 }

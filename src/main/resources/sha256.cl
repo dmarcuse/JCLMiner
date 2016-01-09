@@ -2,6 +2,9 @@
 
 typedef uchar byte;
 
+// macro so i can change it later
+#define mult_add(a,b,c) (a * b + c)
+
 // right rotate macro
 #define RR(X, Y) rotate((uint)X, -((uint)Y))
 
@@ -23,8 +26,8 @@ typedef uchar byte;
 #define PAD(X, Y) X[63] = Y * 8; X[62] =  Y >> 5; X[Y] = 0x80;
 
 // SHA256 macros
-#define CH(x,y,z) (((x) & (y)) ^ (~(x) & (z)))
-#define MAJ(x,y,z) (((x) & (y)) ^ ((x) & (z)) ^ ((y) & (z)))
+#define CH(x,y,z) bitselect(z,y,x)
+#define MAJ(x,y,z) bitselect(x,y,z^x)
 #define EP0(x) (RR(x,2) ^ RR(x,13) ^ RR(x,22))
 #define EP1(x) (RR(x,6) ^ RR(x,11) ^ RR(x,25))
 #define SIG0(x) (RR(x,7) ^ RR(x,18) ^ ((x) >> 3))
@@ -58,7 +61,7 @@ __constant uint K[64] = {
 void digest(byte* data, uint inputLen, byte* hash) {
 	/* init vars */
 	uint h0, h1, h2, h3, h4, h5, h6, h7;
-	uint a, b, c, d, e, f, g, h, i, j, t1, t2, m[64] = {0};
+	uint a, b, c, d, e, f, g, h, i, j, l, t1, t2, m[64] = {0};
 	PAD(data, inputLen);
 	/* init hash state */
 	h0 = 0x6a09e667;
@@ -70,9 +73,11 @@ void digest(byte* data, uint inputLen, byte* hash) {
 	h6 = 0x1f83d9ab;
 	h7 = 0x5be0cd19;
 	/* transform */
-	for (i = 0, j = 0; i < 16; ++i, j += 4)
-		m[i] = (data[j] << 24) | (data[j + 1] << 16) | (data[j + 2] << 8) | (data[j + 3]);
-	for ( ; i < 64; ++i)
+#pragma unroll
+	for (i = 0; i < 16; i++)
+		m[i] = (data[mult_add(i,4,0)] << 24) | (data[mult_add(i,4,1)] << 16) | (data[mult_add(i,4,2)] << 8) | (data[mult_add(i,4,3)]);
+#pragma unroll
+	for (i = 16; i < 64; ++i)
 		m[i] = SIG1(m[i - 2]) + m[i - 7] + SIG0(m[i - 15]) + m[i - 16];
 	a = h0;
 	b = h1;
@@ -82,6 +87,7 @@ void digest(byte* data, uint inputLen, byte* hash) {
 	f = h5;
 	g = h6;
 	h = h7;
+#pragma unroll
 	for (i = 0; i < 64; ++i) {
 		t1 = h + EP1(e) + CH(e,f,g) + K[i] + m[i];
 		t2 = EP0(a) + MAJ(a,b,c);
@@ -96,21 +102,25 @@ void digest(byte* data, uint inputLen, byte* hash) {
 	}
 	h0 += a;
 	h1 += b;
-	h2 += c;
-	h3 += d;
-	h4 += e;
-	h5 += f;
-	h6 += g;
-	h7 += h;
+	// only first 2 hash values needed.
+//	h2 += c;
+//	h3 += d;
+//	h4 += e;
+//	h5 += f;
+//	h6 += g;
+//	h7 += h;
 	/* finish */
+#pragma unroll
 	for (i = 0; i < 4; ++i) {
-		hash[i]      = (h0 >> (24 - i * 8)) & 0x000000ff;
-		hash[i + 4]  = (h1 >> (24 - i * 8)) & 0x000000ff;
-		hash[i + 8]  = (h2 >> (24 - i * 8)) & 0x000000ff;
-		hash[i + 12] = (h3 >> (24 - i * 8)) & 0x000000ff;
-		hash[i + 16] = (h4 >> (24 - i * 8)) & 0x000000ff;
-		hash[i + 20] = (h5 >> (24 - i * 8)) & 0x000000ff;
-		hash[i + 24] = (h6 >> (24 - i * 8)) & 0x000000ff;
-		hash[i + 28] = (h7 >> (24 - i * 8)) & 0x000000ff;
+		l = mult_add(i, -8, 24);
+		hash[i]      = (h0 >> l) & 0x000000ff;
+		hash[i + 4]  = (h1 >> l) & 0x000000ff;
+		// only the first 6 bytes are needed.
+//		hash[i + 8]  = (h2 >> l) & 0x000000ff;
+//		hash[i + 12] = (h3 >> l) & 0x000000ff;
+//		hash[i + 16] = (h4 >> l) & 0x000000ff;
+//		hash[i + 20] = (h5 >> l) & 0x000000ff;
+//		hash[i + 24] = (h6 >> l) & 0x000000ff;
+//		hash[i + 28] = (h7 >> l) & 0x000000ff;
 	}
 }
