@@ -1,5 +1,7 @@
 package me.apemanzilla.jclminer;
 
+import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Observable;
@@ -174,16 +176,19 @@ public final class JCLMiner implements Runnable, Observer {
 			if (sol != null) {
 				try {
 					String currBlock = state.getBlock();
-					if (host.submitBlock(sol)) {
+					if (host.submitBlock(URLEncoder.encode(sol,"ISO-8859-1"))) {
 						blocks++;
-						System.out.println("Block solved!");
+						System.out.format("Block solved with solution '%s!'\n", sol);
 						// wait for block to change
 						while (state.getBlock() == currBlock) {}
 					} else {
-						System.out.println("Solution rejected.");
+						System.out.format("Solution '%s' rejected.\n", sol);
 					}
 				} catch (SyncnodeDownException e) {
 					System.err.format("Failed to submit solution %s - syncnode down\n",sol);
+					e.printStackTrace();
+				} catch (UnsupportedEncodingException e) {
+					System.err.format("Failed to encode solution %s", sol);
 					e.printStackTrace();
 				}
 			}
