@@ -57,7 +57,7 @@ public final class JCLMiner implements Runnable, Observer {
 	
 	public JCLMiner(KristAddress host) {
 		this.host = host;
-		this.state = new KristMiningState(3000);
+		this.state = new KristMiningState(1500);
 		miners = new ArrayList<Miner>();
 	}
 	
@@ -194,6 +194,9 @@ public final class JCLMiner implements Runnable, Observer {
 					e.printStackTrace();
 				}
 			}
+			try {
+				Thread.sleep(250);
+			} catch (InterruptedException e) {}
 			stop = false;
 		}
 	}
