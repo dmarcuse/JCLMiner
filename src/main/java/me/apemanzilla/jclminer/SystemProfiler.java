@@ -62,10 +62,12 @@ public class SystemProfiler implements Runnable {
 			}
 		}
 		Iterator<Integer> it = perSignature.keySet().iterator();
+		String output = "-a -d ";
 		while (it.hasNext()) {
 			int i = it.next();
-			System.out.format("Signature: %d Optimal Worksize: %d", i, perSignature.get(i));
+			output += String.format("%d:%d;", i, perSignature.get(i));
 		}
+		System.out.format("Profiling complete! Use the following launch arguments for optimal performance:\n%s\n",output);
 	}
 
 }
