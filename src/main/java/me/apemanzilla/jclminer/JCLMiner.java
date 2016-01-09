@@ -183,7 +183,7 @@ public final class JCLMiner implements Runnable, Observer {
 						// wait for block to change
 						while (state.getBlock() == currBlock) {}
 					} else {
-						System.out.format("Solution rejected.", sol);
+						System.out.println("Solution rejected.");
 					}
 				} catch (SyncnodeDownException e) {
 					System.err.format("Failed to submit solution '%s' - syncnode down\n",sol);
