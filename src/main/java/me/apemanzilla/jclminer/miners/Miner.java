@@ -50,4 +50,18 @@ public abstract class Miner extends Observable {
 	 * @return The name of the device
 	 */
 	public abstract String getDeviceName();
+	
+	/**
+	 * Checks whether the given Miner is using OpenCL.
+	 * @return
+	 */
+	public boolean isOpenCLMiner() {
+		return false;
+	}
+	
+	/**
+	 * Sets the work size for the given Miner. Only to be used on OpenCL miners.
+	 * @param range The work size
+	 */
+	public void setWorkSize(int size) {}
 }

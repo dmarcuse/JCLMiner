@@ -4,6 +4,7 @@ import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Observable;
 import java.util.Observer;
 import java.util.Random;
@@ -50,6 +51,8 @@ public final class JCLMiner implements Runnable, Observer {
 	
 	private List<CLDevice> devices;
 	
+	private Map<Integer, Integer> deviceWorkSizes;
+	
 	private final KristAddress host;
 	private final List<Miner> miners;
 	
@@ -70,7 +73,12 @@ public final class JCLMiner implements Runnable, Observer {
 			CLDevice best = JavaCL.getBestDevice();
 			if (isDeviceCompatible(best)) {
 				try {
-					miners.add(MinerFactory.createMiner(best, this));
+					Miner m = MinerFactory.createMiner(best, host.getAddress());
+					if (deviceWorkSizes.containsKey(best.createSignature().hashCode())) {
+						m.setWorkSize(deviceWorkSizes.get(best.createSignature().hashCode()));
+						System.out.format("Work size manually overridden for device %s.\n", best.getName());
+					}
+					miners.add(m);
 					System.out.format("Device %s ready.\n", best.getName().trim());
 				} catch (MinerInitException e) {
 					System.err.println(String.format("Failed to create miner for device %s\n", best.getName().trim()));
@@ -82,7 +90,11 @@ public final class JCLMiner implements Runnable, Observer {
 			for (CLDevice dev : devices) {
 				if (isDeviceCompatible(dev)) {
 					try {
-						Miner m = MinerFactory.createMiner(dev, this);
+						Miner m = MinerFactory.createMiner(dev, host.getAddress());
+						if (deviceWorkSizes.containsKey(dev.createSignature().hashCode())) {
+							m.setWorkSize(deviceWorkSizes.get(dev.createSignature().hashCode()));
+							System.out.format("Work size manually overridden for device %s.\n", dev.getName());
+						}
 						miners.add(m);
 						System.out.format("Device %s ready.\n", dev.getName().trim());
 					} catch (MinerInitException e) {
@@ -98,6 +110,10 @@ public final class JCLMiner implements Runnable, Observer {
 	
 	public void useDevices(List<CLDevice> devices) {
 		this.devices = devices;
+	}
+	
+	public void setWorkSizes(Map<Integer, Integer> deviceWorkSizes) {
+		this.deviceWorkSizes = deviceWorkSizes;
 	}
 	
 	private boolean stop;
@@ -168,7 +184,7 @@ public final class JCLMiner implements Runnable, Observer {
 			startMiners();
 			while (!stop) {
 				try {
-					Thread.sleep(2000);
+					Thread.sleep(1000);
 				} catch (InterruptedException e) {}
 				if (!stop) System.out.format("%s | %d blocks solved | %.2f blocks per minute\n", Utils.formatSpeed(getAverageHashRate()), blocks, blocksPerMinute());
 			}
@@ -200,7 +216,7 @@ public final class JCLMiner implements Runnable, Observer {
 			stop = false;
 		}
 	}
-
+	
 	public KristAddress getHost() {
 		return host;
 	}
