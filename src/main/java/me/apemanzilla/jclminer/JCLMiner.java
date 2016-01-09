@@ -169,7 +169,7 @@ public final class JCLMiner implements Runnable, Observer {
 				try {
 					Thread.sleep(2000);
 				} catch (InterruptedException e) {}
-				if (!stop) System.out.format("Avg hashrate: %s Solved: %d Blocks per minute: %.2f\n", Utils.formatSpeed(getAverageHashRate()), blocks, blocksPerMinute());
+				if (!stop) System.out.format("%s | %d blocks solved | %.2f blocks per minute\n", Utils.formatSpeed(getAverageHashRate()), blocks, blocksPerMinute());
 			}
 			stopMiners();
 			String sol = findSolution();
@@ -178,7 +178,7 @@ public final class JCLMiner implements Runnable, Observer {
 					String currBlock = state.getBlock();
 					if (host.submitBlock(URLEncoder.encode(sol,"ISO-8859-1"))) {
 						blocks++;
-						System.out.format("Block solved with solution '%s!'\n", sol);
+						System.out.format("Block solved with solution '%s'!\n", sol);
 						// wait for block to change
 						while (state.getBlock() == currBlock) {}
 					} else {
