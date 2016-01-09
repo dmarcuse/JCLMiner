@@ -175,20 +175,21 @@ public final class JCLMiner implements Runnable, Observer {
 			String sol = findSolution();
 			if (sol != null) {
 				try {
+					System.out.format("Submitting solution '%s' > ", sol);
 					String currBlock = state.getBlock();
 					if (host.submitBlock(URLEncoder.encode(sol,"ISO-8859-1"))) {
 						blocks++;
-						System.out.format("Block solved with solution '%s'!\n", sol);
+						System.out.println("Success!");
 						// wait for block to change
 						while (state.getBlock() == currBlock) {}
 					} else {
-						System.out.format("Solution '%s' rejected.\n", sol);
+						System.out.format("Solution rejected.", sol);
 					}
 				} catch (SyncnodeDownException e) {
-					System.err.format("Failed to submit solution %s - syncnode down\n",sol);
+					System.err.format("Failed to submit solution '%s' - syncnode down\n",sol);
 					e.printStackTrace();
 				} catch (UnsupportedEncodingException e) {
-					System.err.format("Failed to encode solution %s", sol);
+					System.err.format("Failed to encode solution '%s'\n", sol);
 					e.printStackTrace();
 				}
 			}

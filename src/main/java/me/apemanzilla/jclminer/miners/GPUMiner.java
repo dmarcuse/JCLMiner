@@ -72,7 +72,9 @@ public class GPUMiner extends Miner implements Runnable {
 	@Override
 	public void stop() {
 		if (controller == null && controller.isAlive()) {
-			controller.interrupt();
+			while(controller.isAlive()) {
+				controller.interrupt();
+			}
 		}
 	}
 
@@ -141,7 +143,7 @@ public class GPUMiner extends Miner implements Runnable {
 			kernel.setArgs(addressBuf, blockBuf, prefixBuf, base, work, outputBuf);
 			CLEvent evt = kernel.enqueueNDRange(queue, new int[] {range});
 			Pointer<Byte> outputPtr = outputBuf.read(queue, evt);
-			if (outputPtr.get(0) != 0) {
+			if (outputPtr.get(0) != 0 && !Thread.interrupted()) {
 				// try solution
 				byte[] output = new byte[34];
 				for (int i = 0; i < 34; i++) {
