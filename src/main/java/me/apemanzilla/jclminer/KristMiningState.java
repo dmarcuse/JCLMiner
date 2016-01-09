@@ -67,8 +67,8 @@ public class KristMiningState extends Observable implements Runnable {
 	public void run() {
 		while (!Thread.interrupted()) {
 			try {
-				String block = KristAPI.getBlock();
-				if (lastBlock != block) {
+				String block = KristAPI.getBlock().trim();
+				if (lastBlock == null || !lastBlock.equals(block)) {
 					long work = KristAPI.getWork();
 					if (this.work != work) {
 						synchronized (lock) {

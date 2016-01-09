@@ -153,6 +153,7 @@ public final class JCLMiner implements Runnable, Observer {
 	public void run() {
 		log("Starting JCLMiner...");
 		initMiners();
+		state.addObserver(this);
 		Thread stateDaemon = new Thread(state);
 		stateDaemon.setDaemon(true);
 		stateDaemon.start();
