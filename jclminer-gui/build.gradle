@@ -1,0 +1,27 @@
+apply plugin: 'java'
+apply plugin: 'application'
+apply plugin: 'eclipse'
+apply plugin: 'idea'
+
+sourceCompatibility = 1.7
+
+mainClassName = 'me.apemanzilla.jclminer.gui.JCLMinerGui'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    compile rootProject
+}
+
+jar {
+    manifest {
+        attributes(
+                "Manifest-Version": "1.0",
+                "Main-Class": mainClassName
+        )
+    }
+
+    from configurations.compile.collect { it.isDirectory() ? it : zipTree(it) }
+}

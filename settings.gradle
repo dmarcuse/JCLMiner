@@ -1,3 +1,5 @@
 rootProject.name = 'JCLMiner'
 
 include 'KristAPI'
+include 'jclminer-gui'
+
