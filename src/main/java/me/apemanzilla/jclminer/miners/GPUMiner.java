@@ -83,7 +83,12 @@ public class GPUMiner extends Miner implements Runnable {
 
 	@Override
 	public String getSolution() {
-		return solution != null ? solution : null;
+		if (solution != null) {
+			String t = solution;
+			solution = null;
+			return t;
+		}
+		return null;
 	}
 
 	@Override

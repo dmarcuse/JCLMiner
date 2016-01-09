@@ -102,6 +102,8 @@ public final class JCLMiner implements Runnable, Observer {
 	
 	// blocks solved
 	private long blocks = 0;
+	// time started
+	private long started = 0;
 	
 	private void startMiners() {
 		System.out.format("Mining for block: %s Work: %d\n", state.getBlock().trim(), state.getWork());
@@ -133,6 +135,18 @@ public final class JCLMiner implements Runnable, Observer {
 		return null;
 	}
 	
+	private long secondsSinceStarted() {
+		return (System.currentTimeMillis() - started) / 1000;
+	}
+	
+	private double blocksPerMinute() {
+		double m = (double) secondsSinceStarted() / 60;
+		if (m != 0 && blocks != 0) {
+			return (double) blocks / m;
+		}
+		return 0;
+	}
+	
 	@Override
 	public void run() {
 		log("Starting JCLMiner...");
@@ -146,13 +160,14 @@ public final class JCLMiner implements Runnable, Observer {
 		while(state.getBlock() == null || state.getWork() == 0) {}
 		// main loop
 		System.out.println("Starting miners...");
+		started = System.currentTimeMillis();
 		while (true) {
 			startMiners();
 			while (!stop) {
 				try {
 					Thread.sleep(2000);
 				} catch (InterruptedException e) {}
-				if (!stop) System.out.format("Average hash rate: %s\n", Utils.formatSpeed(getAverageHashRate()));
+				if (!stop) System.out.format("Avg hashrate: %s Solved: %d Blocks per minute: %.2f\n", Utils.formatSpeed(getAverageHashRate()), blocks, blocksPerMinute());
 			}
 			stopMiners();
 			String sol = findSolution();
@@ -161,9 +176,11 @@ public final class JCLMiner implements Runnable, Observer {
 					String currBlock = state.getBlock();
 					if (host.submitBlock(sol)) {
 						blocks++;
-						System.out.format("Block solved!\n%d total.\n", blocks);
+						System.out.println("Block solved!");
 						// wait for block to change
 						while (state.getBlock() == currBlock) {}
+					} else {
+						System.out.println("Solution rejected.");
 					}
 				} catch (SyncnodeDownException e) {
 					System.err.format("Failed to submit solution %s - syncnode down\n",sol);
