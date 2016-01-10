@@ -154,6 +154,7 @@ public class GPUMiner extends Miner implements Runnable {
 			try {
 				CLEvent evt = kernel.enqueueNDRange(queue, new int[] {range});
 				Pointer<Byte> outputPtr = outputBuf.read(queue, evt);
+				evt.release();
 				if (outputPtr.get(0) != 0 && !Thread.interrupted()) {
 					// try solution
 					byte[] output = new byte[34];
@@ -167,14 +168,20 @@ public class GPUMiner extends Miner implements Runnable {
 						solution = new String(MinerUtils.getChars(c));
 						setChanged();
 						notifyObservers();
+						outputPtr.release();
 						break;
 					}
 				}
+				outputPtr.release();
 				base += range;
 				synchronized (hash_count_lock) { hashes += range; }
 			} catch (CLException e) {
 				controller.interrupt();
 			}
 		}
+		addressBuf.release();
+		blockBuf.release();
+		prefixBuf.release();
+		outputBuf.release();
 	}
 }
