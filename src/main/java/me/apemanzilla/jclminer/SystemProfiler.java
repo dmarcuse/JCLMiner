@@ -5,7 +5,6 @@ import java.util.Iterator;
 import java.util.List;
 
 import com.nativelibs4java.opencl.CLDevice;
-import com.sci.skristminer.util.Utils;
 
 import me.apemanzilla.jclminer.miners.Miner;
 import me.apemanzilla.jclminer.miners.MinerFactory;
@@ -38,7 +37,7 @@ public class SystemProfiler implements Runnable {
 						Thread.sleep(testTime);
 					} catch (InterruptedException e) {}
 					results[i] = m.getAverageHashRate();
-					System.out.format("%s\n", Utils.formatSpeed(m.getAverageHashRate()));
+					System.out.format("%s\n", MinerUtils.formatSpeed(m.getAverageHashRate()));
 					m.stop();
 					if (i > 1) {
 						if (results[i] < results[i-1]) {

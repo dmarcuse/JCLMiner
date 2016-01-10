@@ -11,8 +11,7 @@ import com.nativelibs4java.opencl.CLKernel;
 import com.nativelibs4java.opencl.CLMem.Usage;
 import com.nativelibs4java.opencl.CLProgram;
 import com.nativelibs4java.opencl.CLQueue;
-import com.sci.skristminer.util.SHA256;
-import com.sci.skristminer.util.Utils;
+
 import me.apemanzilla.jclminer.JCLMiner;
 import me.apemanzilla.jclminer.MinerUtils;
 
@@ -131,17 +130,17 @@ public class GPUMiner extends Miner implements Runnable {
 		int range = this.range;
 		long base = 0;
 		Pointer<Byte> addressPtr = Pointer.allocateBytes(10).order(ctx.getByteOrder());
-		byte[] addressBytes = Utils.getBytes(address);
+		byte[] addressBytes = MinerUtils.getBytes(address);
 		for (int i = 0; i < 10; i ++) {
 			addressPtr.set(i, addressBytes[i]);
 		}
 		Pointer<Byte> blockPtr = Pointer.allocateBytes(12).order(ctx.getByteOrder());
-		byte[] blockBytes = Utils.getBytes(lastBlock);
+		byte[] blockBytes = MinerUtils.getBytes(lastBlock);
 		for (int i = 0; i < 12; i++) {
 			blockPtr.set(i, blockBytes[i]);
 		}
 		Pointer<Byte> prefixPtr = Pointer.allocateBytes(2).order(ctx.getByteOrder());
-		byte[] prefixBytes = Utils.getBytes(prefix);
+		byte[] prefixBytes = MinerUtils.getBytes(prefix);
 		for (int i = 0; i < 2; i++) {
 			prefixPtr.set(i, prefixBytes[i]);
 		}
@@ -161,7 +160,7 @@ public class GPUMiner extends Miner implements Runnable {
 					for (int i = 0; i < 34; i++) {
 						output[i] = outputPtr.get(i);
 					}
-					long score = Utils.hashToLong(SHA256.digest(output));
+					long score = MinerUtils.hashToLong(MinerUtils.digest(output));
 					if (score <= work) {
 						byte[] c = new byte[12];
 						System.arraycopy(output, 22, c, 0, 12);

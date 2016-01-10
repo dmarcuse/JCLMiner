@@ -9,8 +9,7 @@ import com.nativelibs4java.opencl.CLBuffer;
 import com.nativelibs4java.opencl.CLEvent;
 import com.nativelibs4java.opencl.CLKernel;
 import com.nativelibs4java.opencl.CLMem.Usage;
-import com.sci.skristminer.util.SHA256;
-import com.sci.skristminer.util.Utils;
+import me.apemanzilla.jclminer.MinerUtils;
 
 public class TestCLMining extends OpenCLTest {
 
@@ -19,7 +18,7 @@ public class TestCLMining extends OpenCLTest {
 		String[] inputs = {"","hello","hi","ADLGeag3"};
 		CLKernel kernel = program.createKernel("testHashToLong");
 		for (String input : inputs) {
-			byte[] hashed = SHA256.digest(Utils.getBytes(input));
+			byte[] hashed = MinerUtils.digest(MinerUtils.getBytes(input));
 			Pointer<Byte> inputPtr = Pointer.allocateBytes(hashed.length).order(context.getByteOrder());
 			for (int i = 0; i < hashed.length; i++) {
 				inputPtr.set(i, hashed[i]);
@@ -29,7 +28,7 @@ public class TestCLMining extends OpenCLTest {
 			kernel.setArgs(inputBuf, outputBuf);
 			CLEvent evt = kernel.enqueueNDRange(queue, new int[] {1});
 			Pointer<Long> outputPtr = outputBuf.read(queue, evt);
-			long expect = Utils.hashToLong(hashed);
+			long expect = MinerUtils.hashToLong(hashed);
 			long got = outputPtr.get(0);
 			assertEquals(expect, got);
 		}

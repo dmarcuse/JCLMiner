@@ -10,8 +10,7 @@ import com.nativelibs4java.opencl.CLBuffer;
 import com.nativelibs4java.opencl.CLEvent;
 import com.nativelibs4java.opencl.CLKernel;
 import com.nativelibs4java.opencl.CLMem.Usage;
-import com.sci.skristminer.util.SHA256;
-import com.sci.skristminer.util.Utils;
+import me.apemanzilla.jclminer.MinerUtils;
 
 public class TestCLHashing extends OpenCLTest {
 
@@ -39,7 +38,7 @@ public class TestCLHashing extends OpenCLTest {
 		CLKernel kernel = program.createKernel("testDigest");
 		for (int i = 0; i < inputs.length; i++) {
 			String input = inputs[i];
-			byte[] bytes = Utils.getBytes(input);
+			byte[] bytes = MinerUtils.getBytes(input);
 			Pointer<Byte> inputPtr = Pointer.allocateBytes(input.length());
 			for (int j = 0; j < input.length(); j++) {
 				inputPtr.set(j,bytes[j]);
@@ -54,7 +53,7 @@ public class TestCLHashing extends OpenCLTest {
 			for (int j = 0; j < 32; j++) {
 				got[j] = outputPtr.get(j);
 			}
-			byte[] expect = SHA256.digest(bytes);
+			byte[] expect = MinerUtils.digest(bytes);
 			String gotHex = bytesToHex(got), expectHex = bytesToHex(expect);
 			if (!gotHex.equals(expectHex)) {
 				fail(String.format("Expected %s, got %s for item %d", expectHex, gotHex, i));
