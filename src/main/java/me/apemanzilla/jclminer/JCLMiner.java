@@ -170,7 +170,6 @@ public final class JCLMiner implements Runnable, Observer {
 	public void run() {
 		log("Starting JCLMiner...");
 		initMiners();
-		state.addObserver(this);
 		Thread stateDaemon = new Thread(state);
 		stateDaemon.setDaemon(true);
 		stateDaemon.start();
@@ -178,6 +177,7 @@ public final class JCLMiner implements Runnable, Observer {
 			m.addObserver(this);
 		}
 		while(state.getBlock() == null || state.getWork() == 0) {}
+		state.addObserver(this);
 		// main loop
 		System.out.println("Starting miners...");
 		started = System.currentTimeMillis();
@@ -199,7 +199,12 @@ public final class JCLMiner implements Runnable, Observer {
 						blocks++;
 						System.out.println("Success!");
 						// wait for block to change
-						while (state.getBlock() == currBlock) {}
+						long t = System.currentTimeMillis();
+						while (state.getBlock() == currBlock) {
+							if (System.currentTimeMillis() - t > 10 * 1000) {
+								break;
+							}
+						}
 					} else {
 						System.out.println("Solution rejected.");
 					}
