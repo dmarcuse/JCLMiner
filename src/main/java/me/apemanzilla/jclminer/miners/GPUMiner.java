@@ -61,6 +61,7 @@ public class GPUMiner extends Miner implements Runnable {
 	@Override
 	public void start(long work, String lastBlock) {
 		hashes = 0;
+		solution = null;
 		this.lastBlock = lastBlock;
 		this.work = work;
 		if (controller != null) {

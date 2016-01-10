@@ -10,6 +10,8 @@ import java.util.Observable;
 import java.util.Observer;
 import java.util.Random;
 
+import org.apache.commons.lang.StringUtils;
+
 import com.nativelibs4java.opencl.CLDevice;
 import com.nativelibs4java.opencl.CLPlatform;
 import com.nativelibs4java.opencl.JavaCL;
@@ -20,7 +22,7 @@ import me.apemanzilla.jclminer.miners.Miner;
 import me.apemanzilla.jclminer.miners.MinerFactory;
 import me.apemanzilla.jclminer.miners.MinerInitException;
 
-public final class JCLMiner implements Runnable, Observer {
+public final class JCLMiner extends Observable implements Runnable, Observer {
 
 	public static final String[] cl_build_options = {};
 	
@@ -44,10 +46,6 @@ public final class JCLMiner implements Runnable, Observer {
 			}
 		}
 		return out;
-	}
-	
-	private static void log(String message) {
-		System.out.println(message);
 	}
 	
 	private List<CLDevice> devices;
@@ -116,22 +114,35 @@ public final class JCLMiner implements Runnable, Observer {
 	public void setWorkSizes(Map<Integer, Integer> deviceWorkSizes) {
 		this.deviceWorkSizes = deviceWorkSizes;
 	}
+
+	private boolean run = true;
+	private long timeStarted = 0;
+	// never hurts to be hopeful
+	private long blocksSolved = 0;
 	
-	private boolean stop;
-	
-	// blocks solved
-	private long blocks = 0;
-	// time started
-	private long started = 0;
-	
-	private void startMiners() {
-		System.out.format("Mining for block: %s Work: %d\n", state.getBlock().trim(), state.getWork());
+	// Should NOT be called externally! Only for use by JCLMiner!
+	private void startMiners(long work, String block) {
 		for (Miner m : miners) {
-			m.start(state.getWork(), state.getBlock());
+			m.start(work, block);
 		}
 	}
 	
-	private long getAverageHashRate() {
+	// Should NOT be called externally! Only for use by JCLMiner!
+	private void stopMiners() {
+		for (Miner m : miners) {
+			m.stop();
+		}
+	}
+	
+	private String getSolution() {
+		for (Miner m : miners) {
+			if (m.hasSolution())
+				return m.getSolution();
+		}
+		return null;
+	}
+	
+	public long getAverageHashrate() {
 		long hr = 0;
 		for (Miner m : miners) {
 			hr += m.getAverageHashRate();
@@ -139,87 +150,127 @@ public final class JCLMiner implements Runnable, Observer {
 		return hr;
 	}
 	
-	private void stopMiners() {
+	public long getRecentHashrate() {
+		long hr = 0;
 		for (Miner m : miners) {
-			m.stop();
+			hr += m.getRecentHashRate();
 		}
+		return hr;
 	}
 	
-	private String findSolution() {
-		for (Miner m : miners) {
-			if (m.hasSolution()) {
-				return m.getSolution();
-			}
-		}
-		return null;
+	public long secondsSinceStarted() {
+		return (System.currentTimeMillis() - timeStarted) / 1000;
 	}
 	
-	private long secondsSinceStarted() {
-		return (System.currentTimeMillis() - started) / 1000;
-	}
-	
-	private double blocksPerMinute() {
+	public double getBlocksPerMinute() {
 		double m = (double) secondsSinceStarted() / 60;
-		if (m != 0 && blocks != 0) {
-			return (double) blocks / m;
+		if (m != 0 && blocksSolved != 0) {
+			return (double) blocksSolved / m;
 		}
 		return 0;
 	}
 	
+	private String generateStatusMessage(String block, long hashrate, long blocks, double blocksPerMinute) {
+		String hashrateStr = StringUtils.center(MinerUtils.formatSpeed(hashrate),15);
+		String blockStr = StringUtils.center(String.format("%d blocks", blocks), 15);
+		String bpmStr = StringUtils.center(String.format("%.2f blocks/minute", blocksPerMinute), 25);
+		return hashrateStr + "|" + blockStr + "|" + bpmStr;
+	}
+	
+	private State currentState = State.NOT_RUN;
+	
+	public State getState() {
+		return currentState;
+	}
+	
+	private void updateState(State newState) {
+		currentState = newState;
+		setChanged();
+		notifyObservers();
+	}
+	
+	/**
+	 * To stop running the miner, interrupt the thread.
+	 */
 	@Override
 	public void run() {
-		log("Starting JCLMiner...");
+		
+		updateState(State.INITIALIZING);
+		
+		System.out.println("Starting JCLMiner...");
 		initMiners();
+		// prepare krist state daemon
 		Thread stateDaemon = new Thread(state);
 		stateDaemon.setDaemon(true);
 		stateDaemon.start();
+		// wait for daemon to retrieve first block
+		while (state.getBlock() == null || state.getWork() == 0) {}
+		// add self as observer
+		state.addObserver(this);
 		for (Miner m : miners) {
 			m.addObserver(this);
 		}
-		while(state.getBlock() == null || state.getWork() == 0) {}
-		state.addObserver(this);
 		// main loop
-		System.out.println("Starting miners...");
-		started = System.currentTimeMillis();
-		while (true) {
-			startMiners();
-			while (!stop) {
+		timeStarted = System.currentTimeMillis();
+		outerLoop: while (!Thread.interrupted()) {
+			
+			updateState(State.STARTING_MINERS);
+			
+			System.out.format("Mining for block: '%s' Work: %d\n", state.getBlock(), state.getWork());
+			startMiners(state.getWork(), state.getBlock());
+			run = true;
+			
+			updateState(State.MINING);
+			
+			innerLoop: while (run) {
 				try {
 					Thread.sleep(1000);
-				} catch (InterruptedException e) {}
-				if (!stop) System.out.format("%s | %d blocks solved | %.2f blocks per minute\n", Utils.formatSpeed(getAverageHashRate()), blocks, blocksPerMinute());
+				} catch (InterruptedException e) {
+					break outerLoop;
+				}
+				if (!run)
+					break innerLoop;
+				System.out.println(generateStatusMessage(state.getBlock(),getAverageHashrate(),blocksSolved,getBlocksPerMinute()));
 			}
+			
+			updateState(State.STOPPING_MINERS);
+			
 			stopMiners();
-			String sol = findSolution();
+			String sol = getSolution();
 			if (sol != null) {
+				
+				updateState(State.SUBMITTING);
+				
+				System.out.format("Submitting solution '%s' > ", sol);
 				try {
-					System.out.format("Submitting solution '%s' > ", sol);
-					String currBlock = state.getBlock();
-					if (host.submitBlock(URLEncoder.encode(sol,"ISO-8859-1"))) {
-						blocks++;
-						System.out.println("Success!");
-						// wait for block to change
-						long t = System.currentTimeMillis();
-						while (state.getBlock() == currBlock) {
-							if (System.currentTimeMillis() - t > 10 * 1000) {
-								break;
+					String encoded = URLEncoder.encode(sol,"ISO-8859-1");
+					boolean success = false;
+					while (!success) {
+						String oldBlock = state.getBlock();
+						if (host.submitBlock(encoded)) {
+							// make sure it was actually accepted...
+							long t = System.currentTimeMillis();
+							while (state.getBlock().equals(oldBlock)) {
+								if (System.currentTimeMillis() - t > 10 * 1000) {
+									break;
+								}
 							}
+							if (!state.getBlock().equals(oldBlock)) {
+								success = true;
+								blocksSolved++;
+								System.out.println("Success!");
+							}
+						} else {
+							System.out.println("Rejected.");
+							break;
 						}
-					} else {
-						System.out.println("Solution rejected.");
 					}
-				} catch (SyncnodeDownException e) {
-					System.err.format("Failed to submit solution '%s' - syncnode down\n",sol);
-					e.printStackTrace();
 				} catch (UnsupportedEncodingException e) {
-					System.err.format("Failed to encode solution '%s'\n", sol);
+					e.printStackTrace();
+				} catch (SyncnodeDownException e) {
 					e.printStackTrace();
 				}
 			}
-			try {
-				Thread.sleep(250);
-			} catch (InterruptedException e) {}
-			stop = false;
 		}
 	}
 	
@@ -229,7 +280,38 @@ public final class JCLMiner implements Runnable, Observer {
 
 	@Override
 	public void update(Observable o, Object arg) {
-		stop = true;
+		run = false;
+	}
+	
+	public enum State {
+		/**
+		 * Object initialized, but not run.
+		 */
+		NOT_RUN,
+		/**
+		 * When initializing miners
+		 */
+		INITIALIZING,
+		/**
+		 * Starting miners before mining
+		 */
+		STARTING_MINERS,
+		/**
+		 * Miners running
+		 */
+		MINING,
+		/**
+		 * Stopping miners for a block change/submission, etc
+		 */
+		STOPPING_MINERS,
+		/**
+		 * Submitting a solution
+		 */
+		SUBMITTING,
+		/**
+		 * Error occurred
+		 */
+		ERROR
 	}
 	
 }

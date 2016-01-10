@@ -24,7 +24,7 @@ public final class CommandLineLauncher {
 		options.addOption("p",	"profile",		false,	"Profile each device to find the optimal work range.");
 		options.addOption("b",	"best-device",	false,	"Mine on whichever device is deemed 'best.' Default option.");
 		options.addOption("a",	"all-devices",	false,	"Mine on all compatible hardware devices.");
-		options.addOption("d",	"devices",		true,	"Specifies which devices, and optionally, what range, to mine on. By default, will attempt to choose optimal settings.");
+		options.addOption("d",	"devices",		true,	"Specifies what work size to use for given device types. Run a profile with -p to get best setting.");
 		options.addOption("?",	"help",			false,	"Show usage.");
 		CommandLine cmd = new DefaultParser().parse(options, args);
 		if (cmd.hasOption('l')) {
