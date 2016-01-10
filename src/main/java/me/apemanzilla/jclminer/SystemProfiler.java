@@ -3,6 +3,7 @@ package me.apemanzilla.jclminer;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Observable;
 
 import com.nativelibs4java.opencl.CLDevice;
 
@@ -10,22 +11,37 @@ import me.apemanzilla.jclminer.miners.Miner;
 import me.apemanzilla.jclminer.miners.MinerFactory;
 import me.apemanzilla.jclminer.miners.MinerInitException;
 
-public class SystemProfiler implements Runnable {
+public class SystemProfiler extends Observable implements Runnable {
 
 	private final int testTime;
 	
 	public SystemProfiler(int testTime) {
 		this.testTime = testTime * 1000;
+		currentState = State.NOT_RUN;
+	}
+	
+	private State currentState;
+	
+	private void updateState(State newState) {
+		currentState = newState;
+		setChanged();
+		notifyObservers();
+	}
+	
+	public State getState() {
+		return currentState;
 	}
 	
 	@Override
 	public void run() {
+		updateState(State.INITIALIZING);
 		System.out.println("Starting system profiler...");
 		List<CLDevice> devices = JCLMiner.listCompatibleDevices();
 		HashMap<Integer, Integer> perSignature = new HashMap<Integer, Integer>();
 		for (CLDevice dev : devices) {
 			if (!perSignature.containsKey(dev.createSignature().hashCode()))
 			try {
+				updateState(State.PROFILING);
 				Miner m = MinerFactory.createMiner(dev, "k5ztameslf");
 				System.out.format("Profiling device %s\n", dev.getName().trim());
 				long[] results = new long[16];
@@ -64,7 +80,16 @@ public class SystemProfiler implements Runnable {
 			int i = it.next();
 			output += String.format("%d:%d;", i, perSignature.get(i));
 		}
+		updateState(State.DONE);
 		System.out.format("Profiling complete! Use the following launch arguments for optimal performance:\n%s\n",output);
 	}
 
+	public enum State {
+		NOT_RUN,
+		INITIALIZING,
+		PROFILING,
+		DONE,
+		ERROR
+	}
+	
 }
