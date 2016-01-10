@@ -12,7 +12,7 @@ public class JCLMinerGui {
     }
 
     public static void main(String[] args) {
-        setSystemUIStyle();
+        //setSystemUIStyle();
 
         MinerWindow window = new MinerWindow();
         window.run();
