@@ -25,7 +25,7 @@ __kernel void testK(__global int* output) {
 __kernel void testPadding(__global const char* input, int length, __global char* output) {
 	int id = get_global_id(0);
 	if (id == 0) {
-		char data[64];
+		char data[64] = {0};
 		for (int i = 0; i < length; i++) {
 			data[i] = input[i];
 		}
@@ -40,11 +40,11 @@ __kernel void testPadding(__global const char* input, int length, __global char*
 __kernel void testDigest(__global const uchar* input, int length, __global uchar* output) {
 	int id = get_global_id(0);
 	if (id == 0) {
-		uchar data[64];
+		uchar data[64] = {0};
 		for (int i = 0; i < length; i++) {
 			data[i] = input[i];
 		}
-		uchar out[32];
+		uchar out[32] = {0};
 		digest(data, length, out);
 		for (int i = 0; i < 32; i++) {
 			output[i] = out[i];
@@ -55,7 +55,7 @@ __kernel void testDigest(__global const uchar* input, int length, __global uchar
 
 __kernel void testHashToLong(__global const byte* hash, __global long* output) {
 	int id = get_global_id(0);
-	byte input[32];
+	byte input[32] = {0};
 	for (int i = 0; i < 32; i++) {
 		input[i] = hash[i];
 	}
