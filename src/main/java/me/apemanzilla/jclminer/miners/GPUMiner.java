@@ -6,6 +6,7 @@ import com.nativelibs4java.opencl.CLBuffer;
 import com.nativelibs4java.opencl.CLContext;
 import com.nativelibs4java.opencl.CLDevice;
 import com.nativelibs4java.opencl.CLEvent;
+import com.nativelibs4java.opencl.CLException;
 import com.nativelibs4java.opencl.CLKernel;
 import com.nativelibs4java.opencl.CLMem.Usage;
 import com.nativelibs4java.opencl.CLProgram;
@@ -30,6 +31,7 @@ public class GPUMiner extends Miner implements Runnable {
 	
 	private Thread controller;
 	
+	private int range = 1024 * 4;
 	private long timeStarted = 0;
 	private long hashes = 0;
 	
@@ -113,11 +115,19 @@ public class GPUMiner extends Miner implements Runnable {
 	public String getDeviceName() {
 		return dev.getName().trim();
 	}
+	
+	public boolean isOpenCLMiner() {
+		return true;
+	}
 
+	public void setWorkSize(int size) {
+		this.range = size;
+	}
+	
 	@Override
 	public void run() {
 		// TODO make this a lot better
-		int range = 90000;
+		int range = this.range;
 		long base = 0;
 		Pointer<Byte> addressPtr = Pointer.allocateBytes(10).order(ctx.getByteOrder());
 		byte[] addressBytes = Utils.getBytes(address);
@@ -141,26 +151,30 @@ public class GPUMiner extends Miner implements Runnable {
 		CLBuffer<Byte> outputBuf = ctx.createByteBuffer(Usage.Output, 34);
 		while (!Thread.interrupted()) {
 			kernel.setArgs(addressBuf, blockBuf, prefixBuf, base, work, outputBuf);
-			CLEvent evt = kernel.enqueueNDRange(queue, new int[] {range});
-			Pointer<Byte> outputPtr = outputBuf.read(queue, evt);
-			if (outputPtr.get(0) != 0 && !Thread.interrupted()) {
-				// try solution
-				byte[] output = new byte[34];
-				for (int i = 0; i < 34; i++) {
-					output[i] = outputPtr.get(i);
+			try {
+				CLEvent evt = kernel.enqueueNDRange(queue, new int[] {range});
+				Pointer<Byte> outputPtr = outputBuf.read(queue, evt);
+				if (outputPtr.get(0) != 0 && !Thread.interrupted()) {
+					// try solution
+					byte[] output = new byte[34];
+					for (int i = 0; i < 34; i++) {
+						output[i] = outputPtr.get(i);
+					}
+					long score = Utils.hashToLong(SHA256.digest(output));
+					if (score <= work) {
+						byte[] c = new byte[12];
+						System.arraycopy(output, 22, c, 0, 12);
+						solution = new String(MinerUtils.getChars(c));
+						setChanged();
+						notifyObservers();
+						break;
+					}
 				}
-				long score = Utils.hashToLong(SHA256.digest(output));
-				if (score <= work) {
-					byte[] c = new byte[12];
-					System.arraycopy(output, 22, c, 0, 12);
-					solution = new String(MinerUtils.getChars(c));
-					setChanged();
-					notifyObservers();
-					break;
-				}
+				base += range;
+				synchronized (hash_count_lock) { hashes += range; }
+			} catch (CLException e) {
+				controller.interrupt();
 			}
-			base += range;
-			synchronized (hash_count_lock) { hashes += range; }
 		}
 	}
 }
