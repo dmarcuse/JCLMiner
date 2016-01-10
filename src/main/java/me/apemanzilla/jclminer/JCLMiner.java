@@ -23,7 +23,15 @@ import me.apemanzilla.jclminer.miners.MinerInitException;
 
 public final class JCLMiner extends Observable implements Runnable, Observer {
 
-	public static final String[] cl_build_options = {};
+	public static final String[] cl_build_options = {
+			"-cl-single-precision-constant",
+			"-cl-denorms-are-zero",
+			"-cl-strict-aliasing",
+			"-cl-mad-enable",
+			"-cl-no-signed-zeros",
+			"-cl-unsafe-math-optimizations",
+			"-cl-finite-math-only"
+	};
 	
 	public static boolean isDeviceCompatible(CLDevice dev) {
 		return dev.getType().contains(CLDevice.Type.GPU);

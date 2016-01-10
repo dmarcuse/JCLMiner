@@ -27,7 +27,7 @@ public class TestCLHashing extends OpenCLTest {
 	/**
 	 * Tests whether the SHA256 digest implementation is producing correct results - compares OpenCL results to Java results
 	 */
-	@Ignore("Test always fails with optimized digest function.")
+	//@Ignore("Test always fails with optimized digest function.")
 	@Test
 	public void testHashing_digest() {
 		// create an input that's 55 characters long (max supported input length)
