@@ -1,6 +1,5 @@
 package me.apemanzilla.jclminer;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -30,7 +29,6 @@ public class SystemProfiler implements Runnable {
 			try {
 				Miner m = MinerFactory.createMiner(dev, "k5ztameslf");
 				System.out.format("Profiling device %s\n", dev.getName().trim());
-				int size = 2;
 				long[] results = new long[16];
 				for (int i = 0; i < results.length; i++) {
 					System.out.format("Test #%d > ", i + 1);

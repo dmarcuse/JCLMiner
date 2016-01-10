@@ -15,7 +15,6 @@ import org.apache.commons.lang.StringUtils;
 import com.nativelibs4java.opencl.CLDevice;
 import com.nativelibs4java.opencl.CLPlatform;
 import com.nativelibs4java.opencl.JavaCL;
-import com.sci.skristminer.util.Utils;
 import me.apemanzilla.kristapi.exceptions.SyncnodeDownException;
 import me.apemanzilla.kristapi.types.KristAddress;
 import me.apemanzilla.jclminer.miners.Miner;

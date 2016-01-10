@@ -2,8 +2,6 @@ package me.apemanzilla.jclminer;
 
 import java.text.DecimalFormat;
 
-import com.sci.skristminer.util.Utils;
-
 public final class MinerUtils {
 
 	private static final DecimalFormat format = new DecimalFormat("0.00");
