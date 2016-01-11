@@ -23,53 +23,47 @@ import me.apemanzilla.jclminer.miners.MinerInitException;
 
 public final class JCLMiner extends Observable implements Runnable, Observer {
 
-	public static final String[] cl_build_options = {
-			"-cl-single-precision-constant",
-			"-cl-denorms-are-zero",
-			"-cl-strict-aliasing",
-			"-cl-mad-enable",
-			"-cl-no-signed-zeros",
-			"-cl-unsafe-math-optimizations",
-			"-cl-finite-math-only"
-	};
-	
+	public static final String[] cl_build_options = { "-cl-single-precision-constant", "-cl-denorms-are-zero",
+			"-cl-strict-aliasing", "-cl-mad-enable", "-cl-no-signed-zeros", "-cl-unsafe-math-optimizations",
+			"-cl-finite-math-only" };
+
 	public static boolean isDeviceCompatible(CLDevice dev) {
 		return dev.getType().contains(CLDevice.Type.GPU);
 	}
-	
-	public static String generateID() {
+
+	public String generatePrefix() {
 		return String.format("%02x", new Random().nextInt(256));
 	}
-	
+
 	public static List<CLDevice> listCompatibleDevices() {
 		List<CLDevice> out = new ArrayList<CLDevice>();
 		CLPlatform platforms[] = JavaCL.listPlatforms();
 		for (CLPlatform plat : platforms) {
 			CLDevice[] devices = plat.listAllDevices(false);
 			for (CLDevice dev : devices) {
-				if(isDeviceCompatible(dev)) {
+				if (isDeviceCompatible(dev)) {
 					out.add(dev);
 				}
 			}
 		}
 		return out;
 	}
-	
+
 	private List<CLDevice> devices;
-	
+
 	private Map<Integer, Integer> deviceWorkSizes = new HashMap<Integer, Integer>();
-	
-	private final KristAddress host;
+
+	private final KristAddress address;
 	private final List<Miner> miners;
-	
+
 	private final KristMiningState state;
-	
-	public JCLMiner(KristAddress host) {
-		this.host = host;
+
+	public JCLMiner(KristAddress address) {
+		this.address = address;
 		this.state = new KristMiningState(1500);
 		miners = new ArrayList<Miner>();
 	}
-	
+
 	/**
 	 * Initialize CL stuff
 	 */
@@ -79,7 +73,7 @@ public final class JCLMiner extends Observable implements Runnable, Observer {
 			CLDevice best = JavaCL.getBestDevice();
 			if (isDeviceCompatible(best)) {
 				try {
-					Miner m = MinerFactory.createMiner(best, host.getAddress());
+					Miner m = MinerFactory.createMiner(best, this);
 					if (deviceWorkSizes.containsKey(best.createSignature().hashCode())) {
 						m.setWorkSize(deviceWorkSizes.get(best.createSignature().hashCode()));
 						System.out.format("Work size manually overridden for device %s.\n", best.getName());
@@ -96,7 +90,7 @@ public final class JCLMiner extends Observable implements Runnable, Observer {
 			for (CLDevice dev : devices) {
 				if (isDeviceCompatible(dev)) {
 					try {
-						Miner m = MinerFactory.createMiner(dev, host.getAddress());
+						Miner m = MinerFactory.createMiner(dev, this);
 						if (deviceWorkSizes.containsKey(dev.createSignature().hashCode())) {
 							m.setWorkSize(deviceWorkSizes.get(dev.createSignature().hashCode()));
 							System.out.format("Work size manually overridden for device %s.\n", dev.getName());
@@ -113,11 +107,11 @@ public final class JCLMiner extends Observable implements Runnable, Observer {
 			}
 		}
 	}
-	
+
 	public void useDevices(List<CLDevice> devices) {
 		this.devices = devices;
 	}
-	
+
 	public void setWorkSizes(Map<Integer, Integer> deviceWorkSizes) {
 		this.deviceWorkSizes = deviceWorkSizes;
 	}
@@ -126,21 +120,21 @@ public final class JCLMiner extends Observable implements Runnable, Observer {
 	private long timeStarted = 0;
 	// never hurts to be hopeful
 	private long blocksSolved = 0;
-	
+
 	// Should NOT be called externally! Only for use by JCLMiner!
 	private void startMiners(long work, String block) {
 		for (Miner m : miners) {
 			m.start(work, block);
 		}
 	}
-	
+
 	// Should NOT be called externally! Only for use by JCLMiner!
 	private void stopMiners() {
 		for (Miner m : miners) {
 			m.stop();
 		}
 	}
-	
+
 	private String getSolution() {
 		for (Miner m : miners) {
 			if (m.hasSolution())
@@ -148,7 +142,7 @@ public final class JCLMiner extends Observable implements Runnable, Observer {
 		}
 		return null;
 	}
-	
+
 	public long getAverageHashrate() {
 		long hr = 0;
 		for (Miner m : miners) {
@@ -156,7 +150,7 @@ public final class JCLMiner extends Observable implements Runnable, Observer {
 		}
 		return hr;
 	}
-	
+
 	public long getRecentHashrate() {
 		long hr = 0;
 		for (Miner m : miners) {
@@ -164,11 +158,11 @@ public final class JCLMiner extends Observable implements Runnable, Observer {
 		}
 		return hr;
 	}
-	
+
 	public long secondsSinceStarted() {
 		return (System.currentTimeMillis() - timeStarted) / 1000;
 	}
-	
+
 	public double getBlocksPerMinute() {
 		double m = (double) secondsSinceStarted() / 60;
 		if (m != 0 && blocksSolved != 0) {
@@ -176,34 +170,40 @@ public final class JCLMiner extends Observable implements Runnable, Observer {
 		}
 		return 0;
 	}
-	
+
 	private String generateStatusMessage(String block, long hashrate, long blocks, double blocksPerMinute) {
-		String hashrateStr = StringUtils.center(MinerUtils.formatSpeed(hashrate),15);
+		String hashrateStr = StringUtils.center(MinerUtils.formatSpeed(hashrate), 15);
 		String blockStr = StringUtils.center(String.format("%d blocks", blocks), 15);
 		String bpmStr = StringUtils.center(String.format("%.2f blocks/minute", blocksPerMinute), 25);
 		return hashrateStr + "|" + blockStr + "|" + bpmStr;
 	}
-	
+
+	private void resetPrefixes() {
+		for (Miner m : miners) {
+			m.setPrefix(generatePrefix());
+		}
+	}
+
 	private State currentState = State.NOT_RUN;
-	
+
 	public State getState() {
 		return currentState;
 	}
-	
+
 	private void updateState(State newState) {
 		currentState = newState;
 		setChanged();
 		notifyObservers();
 	}
-	
+
 	/**
 	 * To stop running the miner, interrupt the thread.
 	 */
 	@Override
 	public void run() {
-		
+
 		updateState(State.INITIALIZING);
-		
+
 		System.out.println("Starting JCLMiner...");
 		initMiners();
 		// prepare krist state daemon
@@ -211,7 +211,8 @@ public final class JCLMiner extends Observable implements Runnable, Observer {
 		stateDaemon.setDaemon(true);
 		stateDaemon.start();
 		// wait for daemon to retrieve first block
-		while (state.getBlock() == null || state.getWork() == 0) {}
+		while (state.getBlock() == null || state.getWork() == 0) {
+		}
 		// add self as observer
 		state.addObserver(this);
 		for (Miner m : miners) {
@@ -220,15 +221,15 @@ public final class JCLMiner extends Observable implements Runnable, Observer {
 		// main loop
 		timeStarted = System.currentTimeMillis();
 		outerLoop: while (!Thread.interrupted()) {
-			
+
 			updateState(State.STARTING_MINERS);
-			
+
 			System.out.format("Mining for block: '%s' Work: %d\n", state.getBlock(), state.getWork());
 			startMiners(state.getWork(), state.getBlock());
 			run = true;
-			
+
 			updateState(State.MINING);
-			
+
 			innerLoop: while (run) {
 				try {
 					Thread.sleep(1000);
@@ -237,24 +238,25 @@ public final class JCLMiner extends Observable implements Runnable, Observer {
 				}
 				if (!run)
 					break innerLoop;
-				System.out.println(generateStatusMessage(state.getBlock(),getAverageHashrate(),blocksSolved,getBlocksPerMinute()));
+				System.out.println(generateStatusMessage(state.getBlock(), getAverageHashrate(), blocksSolved,
+						getBlocksPerMinute()));
 			}
-			
+
 			updateState(State.STOPPING_MINERS);
-			
+
 			stopMiners();
 			String sol = getSolution();
 			if (sol != null) {
-				
+
 				updateState(State.SUBMITTING);
-				
+
 				System.out.format("Submitting solution '%s' > ", sol);
 				try {
-					String encoded = URLEncoder.encode(sol,"ISO-8859-1");
+					String encoded = URLEncoder.encode(sol, "ISO-8859-1");
 					boolean success = false;
 					while (!success) {
 						String oldBlock = state.getBlock();
-						if (host.submitBlock(encoded)) {
+						if (address.submitBlock(encoded)) {
 							// make sure it was actually accepted...
 							long t = System.currentTimeMillis();
 							while (state.getBlock().equals(oldBlock)) {
@@ -278,18 +280,19 @@ public final class JCLMiner extends Observable implements Runnable, Observer {
 					e.printStackTrace();
 				}
 			}
+			resetPrefixes();
 		}
 	}
-	
-	public KristAddress getHost() {
-		return host;
+
+	public KristAddress getAddress() {
+		return address;
 	}
 
 	@Override
 	public void update(Observable o, Object arg) {
 		run = false;
 	}
-	
+
 	public enum State {
 		/**
 		 * Object initialized, but not run.
@@ -320,5 +323,5 @@ public final class JCLMiner extends Observable implements Runnable, Observer {
 		 */
 		ERROR
 	}
-	
+
 }

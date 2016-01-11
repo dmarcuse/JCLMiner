@@ -9,6 +9,8 @@ import java.util.Observable;
  */
 public abstract class Miner extends Observable {
 
+	String prefix;
+	
 	/**
 	 * Starts the miner.
 	 * @param work The work value - hash must be less than this for a nonce to be valid.
@@ -64,4 +66,12 @@ public abstract class Miner extends Observable {
 	 * @param range The work size
 	 */
 	public void setWorkSize(int size) {}
+	
+	public void setPrefix(String prefix) {
+		this.prefix = prefix;
+	}
+	
+	public String getPrefix() {
+		return prefix;
+	}
 }

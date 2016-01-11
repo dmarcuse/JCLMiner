@@ -25,7 +25,6 @@ public class GPUMiner extends Miner implements Runnable {
 	
 	private String lastBlock;
 	private String address;
-	private String prefix = JCLMiner.generateID();
 	private long work;
 	
 	private Thread controller;
@@ -38,7 +37,7 @@ public class GPUMiner extends Miner implements Runnable {
 	
 	private final Object hash_count_lock = new Object();
 	
-	GPUMiner(CLDevice dev, String address) throws MinerInitException {
+	GPUMiner(CLDevice dev, String address, String prefix) throws MinerInitException {
 		this.dev = dev;
 		this.ctx = dev.getPlatform().createContext(null, new CLDevice[] {dev});
 		this.queue = ctx.createDefaultQueue();
@@ -55,6 +54,7 @@ public class GPUMiner extends Miner implements Runnable {
 		}
 		kernel = program.createKernel("krist_miner_basic");
 		this.address = address;
+		setPrefix(prefix);
 	}
 	
 	@Override

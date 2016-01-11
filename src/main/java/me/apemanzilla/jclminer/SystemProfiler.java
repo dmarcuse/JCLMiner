@@ -42,7 +42,7 @@ public class SystemProfiler extends Observable implements Runnable {
 			if (!perSignature.containsKey(dev.createSignature().hashCode()))
 			try {
 				updateState(State.PROFILING);
-				Miner m = MinerFactory.createMiner(dev, "k5ztameslf");
+				Miner m = MinerFactory.createMiner(dev, "k5ztameslf", "aa");
 				System.out.format("Profiling device %s\n", dev.getName().trim());
 				long[] results = new long[16];
 				for (int i = 0; i < results.length; i++) {
