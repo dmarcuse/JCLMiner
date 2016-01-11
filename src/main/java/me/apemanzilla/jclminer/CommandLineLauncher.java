@@ -1,8 +1,6 @@
 package me.apemanzilla.jclminer;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.Map.Entry;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.DefaultParser;
@@ -11,8 +9,6 @@ import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 
 import com.nativelibs4java.opencl.CLDevice;
-
-import me.apemanzilla.kristapi.types.KristAddress;
 
 public final class CommandLineLauncher {
 	
@@ -29,10 +25,11 @@ public final class CommandLineLauncher {
 		CommandLine cmd = new DefaultParser().parse(options, args);
 		if (cmd.hasOption('l')) {
 			// list devices
-			List<CLDevice> devices = JCLMiner.listCompatibleDevices();
 			System.out.println("Compatible OpenCL devices:");
-			for (CLDevice dev : devices) {
-				System.out.format("DEVICE: %s SIGNATURE: %s\n", dev.getName().trim(), dev.createSignature().hashCode());
+			for (Entry<Integer, CLDevice> entry : JCLMiner.deviceIds.entrySet()) {
+				int id = entry.getKey();
+				CLDevice dev = entry.getValue();
+				System.out.format("DEVICE: %s SIGNATURE: %d ID: %d\n", dev.getName().trim(), dev.createSignature().hashCode(), id);
 			}
 			System.exit(1);
 		}
@@ -53,21 +50,19 @@ public final class CommandLineLauncher {
 			System.err.println("Invalid Krist address!");
 			System.exit(1);
 		}
-		JCLMiner m = new JCLMiner(KristAddress.auto(cmd.getOptionValue('h')));
+		JCLMinerConfig config = new JCLMinerConfig(cmd.getOptionValue('h'));
 		if (cmd.hasOption('a')) {
-			m.useDevices(JCLMiner.listCompatibleDevices());
+			config.selectAllDevices();
 		}
 		if (cmd.hasOption('d')) {
 			String[] inputs = cmd.getOptionValue('d').split(";");
-			Map<Integer, Integer> sizes = new HashMap<Integer, Integer>();
 			for (String input : inputs) {
 				int sig = Integer.parseInt(input.split(":")[0]);
 				int size = Integer.parseInt(input.split(":")[1]);
-				sizes.put(sig, size);
+				config.getWorkSizes().put(sig, size);
 			}
-			m.setWorkSizes(sizes);
 		}
-		m.run();
+		new JCLMiner(config).run();
 	}
 
 }

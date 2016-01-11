@@ -1,8 +1,8 @@
 package me.apemanzilla.jclminer;
 
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Observable;
 
 import com.nativelibs4java.opencl.CLDevice;
@@ -36,7 +36,7 @@ public class SystemProfiler extends Observable implements Runnable {
 	public void run() {
 		updateState(State.INITIALIZING);
 		System.out.println("Starting system profiler...");
-		List<CLDevice> devices = JCLMiner.listCompatibleDevices();
+		Collection<CLDevice> devices = JCLMiner.deviceIds.values();
 		HashMap<Integer, Integer> perSignature = new HashMap<Integer, Integer>();
 		for (CLDevice dev : devices) {
 			if (!perSignature.containsKey(dev.createSignature().hashCode()))

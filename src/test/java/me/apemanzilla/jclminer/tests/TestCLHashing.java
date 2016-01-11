@@ -3,7 +3,6 @@ package me.apemanzilla.jclminer.tests;
 import static org.junit.Assert.*;
 
 import org.bridj.Pointer;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import com.nativelibs4java.opencl.CLBuffer;
@@ -21,12 +20,10 @@ public class TestCLHashing extends OpenCLTest {
 		}
 		return out;
 	}
-
-	//Test disabled - always fails with optimized digest function.
+	
 	/**
 	 * Tests whether the SHA256 digest implementation is producing correct results - compares OpenCL results to Java results
 	 */
-	//@Ignore("Test always fails with optimized digest function.")
 	@Test
 	public void testHashing_digest() {
 		// create an input that's 55 characters long (max supported input length)

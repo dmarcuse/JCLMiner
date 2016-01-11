@@ -15,14 +15,31 @@ import org.apache.commons.lang.StringUtils;
 import com.nativelibs4java.opencl.CLDevice;
 import com.nativelibs4java.opencl.CLPlatform;
 import com.nativelibs4java.opencl.JavaCL;
-import me.apemanzilla.kristapi.exceptions.SyncnodeDownException;
-import me.apemanzilla.kristapi.types.KristAddress;
+
 import me.apemanzilla.jclminer.miners.Miner;
 import me.apemanzilla.jclminer.miners.MinerFactory;
 import me.apemanzilla.jclminer.miners.MinerInitException;
+import me.apemanzilla.kristapi.exceptions.SyncnodeDownException;
+import me.apemanzilla.kristapi.types.KristAddress;
 
 public final class JCLMiner extends Observable implements Runnable, Observer {
 
+	public final static Map<Integer, CLDevice> deviceIds = new HashMap<Integer, CLDevice>();
+	
+	static {
+		int id = 0;
+		CLPlatform platforms[] = JavaCL.listPlatforms();
+		for (CLPlatform plat : platforms) {
+			CLDevice devices[] = plat.listAllDevices(false);
+			for (CLDevice dev : devices) {
+				if (isDeviceCompatible(dev)) {
+					deviceIds.put(id, dev);
+					id++;
+				}
+			}
+		}
+	}
+	
 	public static final String[] cl_build_options = { "-cl-single-precision-constant", "-cl-denorms-are-zero",
 			"-cl-strict-aliasing", "-cl-mad-enable", "-cl-no-signed-zeros", "-cl-unsafe-math-optimizations",
 			"-cl-finite-math-only" };
@@ -30,11 +47,8 @@ public final class JCLMiner extends Observable implements Runnable, Observer {
 	public static boolean isDeviceCompatible(CLDevice dev) {
 		return dev.getType().contains(CLDevice.Type.GPU);
 	}
-
-	public String generatePrefix() {
-		return String.format("%02x", new Random().nextInt(256));
-	}
-
+	
+	@Deprecated
 	public static List<CLDevice> listCompatibleDevices() {
 		List<CLDevice> out = new ArrayList<CLDevice>();
 		CLPlatform platforms[] = JavaCL.listPlatforms();
@@ -48,22 +62,48 @@ public final class JCLMiner extends Observable implements Runnable, Observer {
 		}
 		return out;
 	}
+	
+	private final JCLMinerConfig config;
 
 	private List<CLDevice> devices;
 
-	private Map<Integer, Integer> deviceWorkSizes = new HashMap<Integer, Integer>();
-
-	private final KristAddress address;
-	private final List<Miner> miners;
+	private final List<Miner> miners = new ArrayList<Miner>();
 
 	private final KristMiningState state;
 
-	public JCLMiner(KristAddress address) {
-		this.address = address;
-		this.state = new KristMiningState(1500);
-		miners = new ArrayList<Miner>();
-	}
+	private boolean run = true;
 
+	private long timeStarted = 0;
+
+	// never hurts to be hopeful
+	private long blocksSolved = 0;
+
+	private State currentState = State.NOT_RUN;
+
+	/**
+	 * Creates a new JCLMiner object. You should create
+	 * and modify a JCLMinerConfig option first and pass it
+	 * to this constructor.
+	 * @param config
+	 */
+	public JCLMiner(JCLMinerConfig config) {
+		this.config = config;
+		this.state = new KristMiningState(config.getDaemonRefreshRate());
+	}
+	
+	/**
+	 * This method has been replaced by {@link #JCLMiner(JCLMinerConfig)}.
+	 * It has been grandfathered
+	 * in to work with the changes
+	 * but should not be used for new code.
+	 * @param address
+	 */
+	@Deprecated
+	public JCLMiner(KristAddress address) {
+		this.config = new JCLMinerConfig(address.getAddress());
+		this.state = new KristMiningState(2000);
+	}
+	
 	/**
 	 * Initialize CL stuff
 	 */
@@ -74,8 +114,8 @@ public final class JCLMiner extends Observable implements Runnable, Observer {
 			if (isDeviceCompatible(best)) {
 				try {
 					Miner m = MinerFactory.createMiner(best, this);
-					if (deviceWorkSizes.containsKey(best.createSignature().hashCode())) {
-						m.setWorkSize(deviceWorkSizes.get(best.createSignature().hashCode()));
+					if (config.getWorkSizes().containsKey(best.createSignature().hashCode())) {
+						m.setWorkSize(config.getWorkSizes().get(best.createSignature().hashCode()));
 						System.out.format("Work size manually overridden for device %s.\n", best.getName());
 					}
 					miners.add(m);
@@ -91,8 +131,8 @@ public final class JCLMiner extends Observable implements Runnable, Observer {
 				if (isDeviceCompatible(dev)) {
 					try {
 						Miner m = MinerFactory.createMiner(dev, this);
-						if (deviceWorkSizes.containsKey(dev.createSignature().hashCode())) {
-							m.setWorkSize(deviceWorkSizes.get(dev.createSignature().hashCode()));
+						if (config.getWorkSizes().containsKey(dev.createSignature().hashCode())) {
+							m.setWorkSize(config.getWorkSizes().get(dev.createSignature().hashCode()));
 							System.out.format("Work size manually overridden for device %s.\n", dev.getName());
 						}
 						miners.add(m);
@@ -107,19 +147,6 @@ public final class JCLMiner extends Observable implements Runnable, Observer {
 			}
 		}
 	}
-
-	public void useDevices(List<CLDevice> devices) {
-		this.devices = devices;
-	}
-
-	public void setWorkSizes(Map<Integer, Integer> deviceWorkSizes) {
-		this.deviceWorkSizes = deviceWorkSizes;
-	}
-
-	private boolean run = true;
-	private long timeStarted = 0;
-	// never hurts to be hopeful
-	private long blocksSolved = 0;
 
 	// Should NOT be called externally! Only for use by JCLMiner!
 	private void startMiners(long work, String block) {
@@ -141,6 +168,25 @@ public final class JCLMiner extends Observable implements Runnable, Observer {
 				return m.getSolution();
 		}
 		return null;
+	}
+
+	private void resetPrefixes() {
+		for (Miner m : miners) {
+			m.setPrefix(generatePrefix());
+		}
+	}
+
+	private String generateStatusMessage(String block, long hashrate, long blocks, double blocksPerMinute) {
+		String hashrateStr = StringUtils.center(MinerUtils.formatSpeed(hashrate), 15);
+		String blockStr = StringUtils.center(String.format("%d blocks", blocks), 15);
+		String bpmStr = StringUtils.center(String.format("%.2f blocks/minute", blocksPerMinute), 25);
+		return hashrateStr + "|" + blockStr + "|" + bpmStr;
+	}
+
+	private void updateState(State newState) {
+		currentState = newState;
+		setChanged();
+		notifyObservers();
 	}
 
 	public long getAverageHashrate() {
@@ -171,29 +217,8 @@ public final class JCLMiner extends Observable implements Runnable, Observer {
 		return 0;
 	}
 
-	private String generateStatusMessage(String block, long hashrate, long blocks, double blocksPerMinute) {
-		String hashrateStr = StringUtils.center(MinerUtils.formatSpeed(hashrate), 15);
-		String blockStr = StringUtils.center(String.format("%d blocks", blocks), 15);
-		String bpmStr = StringUtils.center(String.format("%.2f blocks/minute", blocksPerMinute), 25);
-		return hashrateStr + "|" + blockStr + "|" + bpmStr;
-	}
-
-	private void resetPrefixes() {
-		for (Miner m : miners) {
-			m.setPrefix(generatePrefix());
-		}
-	}
-
-	private State currentState = State.NOT_RUN;
-
 	public State getState() {
 		return currentState;
-	}
-
-	private void updateState(State newState) {
-		currentState = newState;
-		setChanged();
-		notifyObservers();
 	}
 
 	/**
@@ -256,7 +281,7 @@ public final class JCLMiner extends Observable implements Runnable, Observer {
 					boolean success = false;
 					while (!success) {
 						String oldBlock = state.getBlock();
-						if (address.submitBlock(encoded)) {
+						if (config.getAddress().submitBlock(encoded)) {
 							// make sure it was actually accepted...
 							long t = System.currentTimeMillis();
 							while (state.getBlock().equals(oldBlock)) {
@@ -285,12 +310,31 @@ public final class JCLMiner extends Observable implements Runnable, Observer {
 	}
 
 	public KristAddress getAddress() {
-		return address;
+		return config.getAddress();
 	}
 
 	@Override
 	public void update(Observable o, Object arg) {
 		run = false;
+	}
+
+	public String generatePrefix() {
+		return String.format("%02x", new Random().nextInt(256));
+	}
+
+	public void useDevices(List<CLDevice> devices) {
+		this.devices = devices;
+	}
+	
+	/**
+	 * This method should not be used. You should configure worksizes in the
+	 * JCLMinerConfig object used when constructing JCLMiner instead. It has been
+	 * grandfathered in to work with the changes, but should not be used with the new code.
+	 * @param deviceWorkSizes
+	 */
+	@Deprecated
+	public void setWorkSizes(Map<Integer, Integer> deviceWorkSizes) {
+		config.setWorkSizes(deviceWorkSizes);
 	}
 
 	public enum State {
