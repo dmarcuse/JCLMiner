@@ -30,12 +30,8 @@ public class GPUMiner extends Miner implements Runnable {
 	private Thread controller;
 	
 	private int range = 1024 * 4;
-	private long timeStarted = 0;
-	private long hashes = 0;
 	
 	private String solution;
-	
-	private final Object hash_count_lock = new Object();
 	
 	GPUMiner(CLDevice dev, String address, String prefix) throws MinerInitException {
 		this.dev = dev;
@@ -67,7 +63,7 @@ public class GPUMiner extends Miner implements Runnable {
 			controller.interrupt();
 		}
 		controller = new Thread(this);
-		timeStarted = System.currentTimeMillis();
+		startTime = System.currentTimeMillis();
 		controller.start();
 	}
 
@@ -97,18 +93,11 @@ public class GPUMiner extends Miner implements Runnable {
 
 	@Override
 	public long getAverageHashRate() {
-		synchronized (hash_count_lock) {
-			if (hashes > 0) {
-				return hashes / ((System.currentTimeMillis() - timeStarted) / 1000);
-			} else {
-				return 0;
-			}
+		if (hashes > 0) {
+			return hashes / ((System.currentTimeMillis() - startTime) / 1000);
+		} else {
+			return 0;
 		}
-	}
-
-	@Override
-	public long getRecentHashRate() {
-		return 0;
 	}
 
 	@Override
@@ -174,7 +163,7 @@ public class GPUMiner extends Miner implements Runnable {
 				}
 				outputPtr.release();
 				base += range;
-				synchronized (hash_count_lock) { hashes += range; }
+				hashes += range;
 			} catch (CLException e) {
 				controller.interrupt();
 			}

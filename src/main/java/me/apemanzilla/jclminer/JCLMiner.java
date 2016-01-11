@@ -176,11 +176,12 @@ public final class JCLMiner extends Observable implements Runnable, Observer {
 		}
 	}
 
-	private String generateStatusMessage(String block, long hashrate, long blocks, double blocksPerMinute) {
-		String hashrateStr = StringUtils.center(MinerUtils.formatSpeed(hashrate), 15);
+	private String generateStatusMessage(String block, long recentHashrate, long avgHashrate, long blocks, double blocksPerMinute) {
+		String recentHashrateStr =  StringUtils.center("Now " + MinerUtils.formatSpeed(recentHashrate), 19);
+		String avgHashrateStr = StringUtils.center("Avg " + MinerUtils.formatSpeed(avgHashrate), 19);
 		String blockStr = StringUtils.center(String.format("%d blocks", blocks), 15);
 		String bpmStr = StringUtils.center(String.format("%.2f blocks/minute", blocksPerMinute), 25);
-		return hashrateStr + "|" + blockStr + "|" + bpmStr;
+		return recentHashrateStr + "|" + avgHashrateStr + "|" + blockStr + "|" + bpmStr;
 	}
 
 	private void updateState(State newState) {
@@ -263,7 +264,7 @@ public final class JCLMiner extends Observable implements Runnable, Observer {
 				}
 				if (!run)
 					break innerLoop;
-				System.out.println(generateStatusMessage(state.getBlock(), getAverageHashrate(), blocksSolved,
+				System.out.println(generateStatusMessage(state.getBlock(), getRecentHashrate(), getAverageHashrate(), blocksSolved,
 						getBlocksPerMinute()));
 			}
 
