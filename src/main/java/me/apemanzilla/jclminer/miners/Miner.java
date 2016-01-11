@@ -9,7 +9,7 @@ import java.util.Observable;
  */
 public abstract class Miner extends Observable {
 
-	String prefix;
+	protected String prefix;
 	
 	/**
 	 * Starts the miner.
