@@ -9,13 +9,14 @@ import com.nativelibs4java.opencl.CLBuffer;
 import com.nativelibs4java.opencl.CLEvent;
 import com.nativelibs4java.opencl.CLKernel;
 import com.nativelibs4java.opencl.CLMem.Usage;
-import com.sci.skristminer.util.SHA256;
+
+import me.apemanzilla.jclminer.MinerUtils;
 
 public class TestCLConstants extends OpenCLTest {
 
 	@Test
 	public void testConstant_K() {
-		int[] K = SHA256.K;
+		int[] K = MinerUtils.K;
 		CLBuffer<Integer> outputBuf = context.createIntBuffer(Usage.Output, K.length);
 		CLKernel kernel = program.createKernel("testK", outputBuf);
 		CLEvent evt = kernel.enqueueNDRange(queue, new int[] {K.length});

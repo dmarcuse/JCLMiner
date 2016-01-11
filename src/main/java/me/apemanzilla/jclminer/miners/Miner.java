@@ -9,6 +9,13 @@ import java.util.Observable;
  */
 public abstract class Miner extends Observable {
 
+	protected String prefix;
+	
+	protected long hashes = 0;
+	protected long startTime = 0;
+	protected long recentHashes = 0;
+	protected long recentTime = 0;
+	
 	/**
 	 * Starts the miner.
 	 * @param work The work value - hash must be less than this for a nonce to be valid.
@@ -37,13 +44,29 @@ public abstract class Miner extends Observable {
 	 * Gets the average hash rate of the miner, in hashes per second, since the miner was started.
 	 * @return The miner's average hash rate
 	 */
-	public abstract long getAverageHashRate();
+	public long getAverageHashRate() {
+		if (hashes == 0 || startTime == 0) {
+			return 0;
+		}
+		double seconds = (System.currentTimeMillis() - startTime) / 1000;
+		return (long) (hashes / seconds);
+	}
 	
 	/**
-	 * Gets the recent hash rate of the miner
-	 * @return The hashes computer in the last second
+	 * Gets the average hashrate since this function was last called.
 	 */
-	public abstract long getRecentHashRate();
+	public final long getRecentHashRate() {
+		if (hashes == 0 || startTime == 0) {
+			return 0;
+		} else {
+			long h = hashes - recentHashes;
+			double t = (System.currentTimeMillis() - recentTime) / 1000;
+			recentHashes = hashes;
+			recentTime = System.currentTimeMillis();
+			long out = (long) (h/t);
+			return out < 0 ? 0 : out;
+		}
+	}
 	
 	/**
 	 * Gets the name of the device the miner is running on.
@@ -64,4 +87,12 @@ public abstract class Miner extends Observable {
 	 * @param range The work size
 	 */
 	public void setWorkSize(int size) {}
+	
+	public void setPrefix(String prefix) {
+		this.prefix = prefix;
+	}
+	
+	public String getPrefix() {
+		return prefix;
+	}
 }

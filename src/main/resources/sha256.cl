@@ -103,12 +103,12 @@ void digest(byte* data, uint inputLen, byte* hash) {
 	h0 += a;
 	h1 += b;
 	// only first 2 hash values needed.
-//	h2 += c;
-//	h3 += d;
-//	h4 += e;
-//	h5 += f;
-//	h6 += g;
-//	h7 += h;
+	h2 += c;
+	h3 += d;
+	h4 += e;
+	h5 += f;
+	h6 += g;
+	h7 += h;
 	/* finish */
 #pragma unroll
 	for (i = 0; i < 4; ++i) {
@@ -116,11 +116,11 @@ void digest(byte* data, uint inputLen, byte* hash) {
 		hash[i]      = (h0 >> l) & 0x000000ff;
 		hash[i + 4]  = (h1 >> l) & 0x000000ff;
 		// only the first 6 bytes are needed.
-//		hash[i + 8]  = (h2 >> l) & 0x000000ff;
-//		hash[i + 12] = (h3 >> l) & 0x000000ff;
-//		hash[i + 16] = (h4 >> l) & 0x000000ff;
-//		hash[i + 20] = (h5 >> l) & 0x000000ff;
-//		hash[i + 24] = (h6 >> l) & 0x000000ff;
-//		hash[i + 28] = (h7 >> l) & 0x000000ff;
+		hash[i + 8]  = (h2 >> l) & 0x000000ff;
+		hash[i + 12] = (h3 >> l) & 0x000000ff;
+		hash[i + 16] = (h4 >> l) & 0x000000ff;
+		hash[i + 20] = (h5 >> l) & 0x000000ff;
+		hash[i + 24] = (h6 >> l) & 0x000000ff;
+		hash[i + 28] = (h7 >> l) & 0x000000ff;
 	}
 }

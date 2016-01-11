@@ -11,8 +11,8 @@ import com.nativelibs4java.opencl.CLBuffer;
 import com.nativelibs4java.opencl.CLEvent;
 import com.nativelibs4java.opencl.CLKernel;
 import com.nativelibs4java.opencl.CLMem.Usage;
-import com.sci.skristminer.util.SHA256;
-import com.sci.skristminer.util.Utils;
+
+import me.apemanzilla.jclminer.MinerUtils;
 
 /**
  * This class contains multiple JUnit tests that test the OpenCL portions of JCLMiner code.
@@ -69,7 +69,7 @@ public class TestCLMacros extends OpenCLTest {
 		CLKernel kernel = program.createKernel("testPadding");
 		for (int j = 0; j < inputs.length; j++) {
 			String input = inputs[j];
-			byte[] inpbytes = Utils.getBytes(input);
+			byte[] inpbytes = MinerUtils.getBytes(input);
 			Pointer<Byte> inputPtr = Pointer.allocateBytes(input.length());
 			for (int i = 0; i < input.length(); i++) {
 				inputPtr.set(i, inpbytes[i]);
@@ -84,7 +84,7 @@ public class TestCLMacros extends OpenCLTest {
 			for (int i = 0; i < 64; i++) {
 				output[i] = outputPtr.get(i);
 			}
-			byte[] expect = SHA256.padMessage(Utils.getBytes(input));
+			byte[] expect = MinerUtils.padMessage(MinerUtils.getBytes(input));
 			for (int i = 0; i < 64; i++) {
 				if (output[i] != expect[i]) {
 					fail(String.format("Mismatch on byte %d when padding item %d: read byte %d, wanted byte %d", i, j, output[i], expect[i]));

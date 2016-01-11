@@ -11,8 +11,7 @@ import com.nativelibs4java.opencl.CLKernel;
 import com.nativelibs4java.opencl.CLMem.Usage;
 import com.nativelibs4java.opencl.CLProgram;
 import com.nativelibs4java.opencl.CLQueue;
-import com.sci.skristminer.util.SHA256;
-import com.sci.skristminer.util.Utils;
+
 import me.apemanzilla.jclminer.JCLMiner;
 import me.apemanzilla.jclminer.MinerUtils;
 
@@ -26,20 +25,15 @@ public class GPUMiner extends Miner implements Runnable {
 	
 	private String lastBlock;
 	private String address;
-	private String prefix = JCLMiner.generateID();
 	private long work;
 	
 	private Thread controller;
 	
 	private int range = 1024 * 4;
-	private long timeStarted = 0;
-	private long hashes = 0;
 	
 	private String solution;
 	
-	private final Object hash_count_lock = new Object();
-	
-	GPUMiner(CLDevice dev, String address) throws MinerInitException {
+	GPUMiner(CLDevice dev, String address, String prefix) throws MinerInitException {
 		this.dev = dev;
 		this.ctx = dev.getPlatform().createContext(null, new CLDevice[] {dev});
 		this.queue = ctx.createDefaultQueue();
@@ -56,18 +50,20 @@ public class GPUMiner extends Miner implements Runnable {
 		}
 		kernel = program.createKernel("krist_miner_basic");
 		this.address = address;
+		setPrefix(prefix);
 	}
 	
 	@Override
 	public void start(long work, String lastBlock) {
 		hashes = 0;
+		solution = null;
 		this.lastBlock = lastBlock;
 		this.work = work;
 		if (controller != null) {
 			controller.interrupt();
 		}
 		controller = new Thread(this);
-		timeStarted = System.currentTimeMillis();
+		startTime = System.currentTimeMillis();
 		controller.start();
 	}
 
@@ -97,18 +93,11 @@ public class GPUMiner extends Miner implements Runnable {
 
 	@Override
 	public long getAverageHashRate() {
-		synchronized (hash_count_lock) {
-			if (hashes > 0) {
-				return hashes / ((System.currentTimeMillis() - timeStarted) / 1000);
-			} else {
-				return 0;
-			}
+		if (hashes > 0) {
+			return hashes / ((System.currentTimeMillis() - startTime) / 1000);
+		} else {
+			return 0;
 		}
-	}
-
-	@Override
-	public long getRecentHashRate() {
-		return 0;
 	}
 
 	@Override
@@ -130,17 +119,17 @@ public class GPUMiner extends Miner implements Runnable {
 		int range = this.range;
 		long base = 0;
 		Pointer<Byte> addressPtr = Pointer.allocateBytes(10).order(ctx.getByteOrder());
-		byte[] addressBytes = Utils.getBytes(address);
+		byte[] addressBytes = MinerUtils.getBytes(address);
 		for (int i = 0; i < 10; i ++) {
 			addressPtr.set(i, addressBytes[i]);
 		}
 		Pointer<Byte> blockPtr = Pointer.allocateBytes(12).order(ctx.getByteOrder());
-		byte[] blockBytes = Utils.getBytes(lastBlock);
+		byte[] blockBytes = MinerUtils.getBytes(lastBlock);
 		for (int i = 0; i < 12; i++) {
 			blockPtr.set(i, blockBytes[i]);
 		}
 		Pointer<Byte> prefixPtr = Pointer.allocateBytes(2).order(ctx.getByteOrder());
-		byte[] prefixBytes = Utils.getBytes(prefix);
+		byte[] prefixBytes = MinerUtils.getBytes(prefix);
 		for (int i = 0; i < 2; i++) {
 			prefixPtr.set(i, prefixBytes[i]);
 		}
@@ -154,27 +143,34 @@ public class GPUMiner extends Miner implements Runnable {
 			try {
 				CLEvent evt = kernel.enqueueNDRange(queue, new int[] {range});
 				Pointer<Byte> outputPtr = outputBuf.read(queue, evt);
+				evt.release();
 				if (outputPtr.get(0) != 0 && !Thread.interrupted()) {
 					// try solution
 					byte[] output = new byte[34];
 					for (int i = 0; i < 34; i++) {
 						output[i] = outputPtr.get(i);
 					}
-					long score = Utils.hashToLong(SHA256.digest(output));
+					long score = MinerUtils.hashToLong(MinerUtils.digest(output));
 					if (score <= work) {
 						byte[] c = new byte[12];
 						System.arraycopy(output, 22, c, 0, 12);
 						solution = new String(MinerUtils.getChars(c));
 						setChanged();
 						notifyObservers();
+						outputPtr.release();
 						break;
 					}
 				}
+				outputPtr.release();
 				base += range;
-				synchronized (hash_count_lock) { hashes += range; }
+				hashes += range;
 			} catch (CLException e) {
 				controller.interrupt();
 			}
 		}
+		addressBuf.release();
+		blockBuf.release();
+		prefixBuf.release();
+		outputBuf.release();
 	}
 }
