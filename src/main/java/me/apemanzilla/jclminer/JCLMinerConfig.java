@@ -85,4 +85,8 @@ public class JCLMinerConfig {
 		deviceIds.clear();
 		deviceIds.addAll(JCLMiner.deviceIds.keySet());
 	}
+	
+	public List<Integer> getSelectedDevices() {
+		return deviceIds;
+	}
 }
