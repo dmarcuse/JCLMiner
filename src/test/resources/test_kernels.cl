@@ -63,3 +63,7 @@ __kernel void testHashToLong(__global const byte* hash, __global long* output) {
 		output[0] = hashToLong(input);
 	}
 }
+
+__kernel void testVectorDigest(__global const vuint* input, __global vuint* output) {
+
+}

@@ -25,13 +25,14 @@ public class OpenCLTest {
 		context = JavaCL.createBestContext();
 		queue = context.createDefaultQueue();
 		String mainCode = CLCodeLoader.loadCode("/sha256.cl");
+		String vectorCode = CLCodeLoader.loadCode("/vsha256.cl");
 		String minerCode = CLCodeLoader.loadCode("/krist_miner.cl");
 		String testCode = CLCodeLoader.loadCode("/test_kernels.cl");
 		assertNotNull("Failed to load main code", mainCode);
+		assertNotNull("Failed to load vector code", vectorCode);
 		assertNotNull("Failed to load miner code", minerCode);
 		assertNotNull("Failed to load test code", testCode);
-		program = context.createProgram("#define UNIT_TESTING\n",mainCode, minerCode, testCode);
-		
+		program = context.createProgram(vectorCode, mainCode, minerCode, testCode);
 		// Treat all warning as errors so
 		// tests will fail if warnings occur
 		program.addBuildOption("-Werror");
