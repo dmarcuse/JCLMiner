@@ -112,6 +112,7 @@ public final class JCLMiner extends Observable implements Runnable, Observer {
 				Miner m = MinerFactory.createMiner(dev, this);
 				System.out.format("Created miner for device %s.\n", dev.getName());
 				if (config.getWorkSizes().containsKey(dev.createSignature().hashCode())) {
+					m.setWorkSize(config.getWorkSizes().get(dev.createSignature().hashCode()));
 					System.out.format("Work size for device %s manually overridden.\n", dev.getName());
 				}
 				miners.add(m);
