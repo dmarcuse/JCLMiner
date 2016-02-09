@@ -65,8 +65,6 @@ public final class JCLMiner extends Observable implements Runnable, Observer {
 	
 	private final JCLMinerConfig config;
 
-	private List<CLDevice> devices;
-
 	private final List<Miner> miners = new ArrayList<Miner>();
 
 	private final KristMiningState state;
@@ -108,42 +106,19 @@ public final class JCLMiner extends Observable implements Runnable, Observer {
 	 * Initialize CL stuff
 	 */
 	private void initMiners() {
-		if (devices == null) {
-			// get best device
-			CLDevice best = JavaCL.getBestDevice();
-			if (isDeviceCompatible(best)) {
-				try {
-					Miner m = MinerFactory.createMiner(best, this);
-					if (config.getWorkSizes().containsKey(best.createSignature().hashCode())) {
-						m.setWorkSize(config.getWorkSizes().get(best.createSignature().hashCode()));
-						System.out.format("Work size manually overridden for device %s.\n", best.getName());
-					}
-					miners.add(m);
-					System.out.format("Device %s ready.\n", best.getName().trim());
-				} catch (MinerInitException e) {
-					System.err.println(String.format("Failed to create miner for device %s\n", best.getName().trim()));
-					e.printStackTrace();
+		for (int i : config.getSelectedDevices()) {
+			CLDevice dev = deviceIds.get(i);
+			try {
+				Miner m = MinerFactory.createMiner(dev, this);
+				System.out.format("Created miner for device %s.\n", dev.getName());
+				if (config.getWorkSizes().containsKey(dev.createSignature().hashCode())) {
+					m.setWorkSize(config.getWorkSizes().get(dev.createSignature().hashCode()));
+					System.out.format("Work size for device %s manually overridden.\n", dev.getName());
 				}
-			}
-		} else {
-			// use specified devices
-			for (CLDevice dev : devices) {
-				if (isDeviceCompatible(dev)) {
-					try {
-						Miner m = MinerFactory.createMiner(dev, this);
-						if (config.getWorkSizes().containsKey(dev.createSignature().hashCode())) {
-							m.setWorkSize(config.getWorkSizes().get(dev.createSignature().hashCode()));
-							System.out.format("Work size manually overridden for device %s.\n", dev.getName());
-						}
-						miners.add(m);
-						System.out.format("Device %s ready.\n", dev.getName().trim());
-					} catch (MinerInitException e) {
-						System.err.format("Failed to create miner for device %s\n", dev.getName().trim());
-						e.printStackTrace();
-					}
-				} else {
-					System.out.format("Specified device %s is incompatible\n", dev.getName().trim());
-				}
+				miners.add(m);
+			} catch (MinerInitException e) {
+				System.err.format("Failed to create miner for device %s - ID %d.\n", dev.getName().trim(), i);
+				e.printStackTrace();
 			}
 		}
 	}
@@ -321,10 +296,6 @@ public final class JCLMiner extends Observable implements Runnable, Observer {
 
 	public String generatePrefix() {
 		return String.format("%02x", new Random().nextInt(256));
-	}
-
-	public void useDevices(List<CLDevice> devices) {
-		this.devices = devices;
 	}
 	
 	/**
